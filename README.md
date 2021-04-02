@@ -1,4 +1,4 @@
-# Kutambaa
+# Ramper
 
 Trying to reinvent the wheel by writing a crawler. Main inspiration and target should be
 [BUbiNG](https://github.com/LAW-Unimi/BUbiNG) and the corresponding
