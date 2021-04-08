@@ -7,6 +7,9 @@
   org.clojure/java.jmx   {:mvn/version "1.0.0"}
   it.unimi.dsi/dsiutils  {:mvn/version "2.6.17"}
 
+  ;; url normalization
+  lambdaisland/uri       {:mvn/version "1.4.54"}
+
   ;; html parsing
   net.htmlparser.jericho/jericho-html {:mvn/version "3.4"}
   org.jsoup/jsoup                     {:mvn/version "1.13.1"}
