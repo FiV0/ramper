@@ -6,6 +6,10 @@
   org.clojure/core.async {:mvn/version "1.3.610"}
   org.clojure/java.jmx   {:mvn/version "1.0.0"}
   it.unimi.dsi/dsiutils  {:mvn/version "2.6.17"}
+
+  ;; html parsing
+  net.htmlparser.jericho/jericho-html {:mvn/version "3.4"}
+  org.jsoup/jsoup                     {:mvn/version "1.13.1"}
   }
 
  :aliases
