@@ -37,10 +37,24 @@
     (dorun threads)
     (run! deref threads)))
 
-(def time-with-futures (time-taken testing-with-futures))
+(comment
+  (def time-with-futures (time-taken testing-with-futures))
 
-;; throughput per second
-(/ (* nb-threads entries-per-thread) (/ time-with-futures 1000))
+  ;; throughput per second
+  (float (/ (* nb-threads entries-per-thread) (/ time-with-futures 1000)))
 
+  )
 
-;; (defn testing-with)
+(defn testing-with-threads []
+  (let [func #(future (one-cache-loop entries-per-thread))
+        threads (repeatedly nb-threads func)]
+    (dorun threads)
+    (run! deref threads)))
+
+(comment
+  (def time-with-threads (time-taken testing-with-threads))
+
+  ;; throughput per second
+  (float (/ (* nb-threads entries-per-thread) (/ time-with-threads 1000)))
+
+  )
