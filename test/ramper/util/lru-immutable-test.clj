@@ -1,6 +1,5 @@
 (ns ramper.util.lru-immutable-test
-  (:require [clojure.core.async :as async]
-            [clojure.core.cache.wrapped :as cw]
+  (:require [clojure.core.cache.wrapped :as cw]
             [ramper.util.lru :as lru :refer [Cache add check]]
             [ramper.util.lru-immutable :as lru-im]))
 
@@ -42,6 +41,7 @@
 
   ;; throughput per second
   (float (/ (* nb-threads entries-per-thread) (/ time-with-futures 1000)))
+  ;; => 182808.39
 
   )
 
@@ -56,5 +56,6 @@
 
   ;; throughput per second
   (float (/ (* nb-threads entries-per-thread) (/ time-with-threads 1000)))
+  ;; => 183612.58
 
   )
