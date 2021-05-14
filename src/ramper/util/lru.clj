@@ -5,8 +5,15 @@
            (java.util.concurrent.atomic AtomicInteger)
            (ramper.util DoublyLinkedList DoublyLinkedList$Node)))
 
-(defn string->bytes [s]
+(defn string->bytes
+  "Returns a string as byte array."
+  [s]
   (bytes (byte-array (map byte s))))
+
+(defn number-processors
+  "Returns the number of processors on this machine."
+  []
+  (.availableProcessors (Runtime/getRuntime)))
 
 (defrecord MurmurHash [first second])
 
@@ -15,21 +22,26 @@
     #_(->MurmurHash (first hash-array) (second hash-array))
     (vector (first hash-array) (second hash-array))))
 
+(comment
+  (MurmurHash3/hash128 (string->bytes "abc"))
+  (count (MurmurHash3/hash128 (string->bytes "abc")))
+  (first (MurmurHash3/hash128 (string->bytes "abc")))
+  )
+
 (defprotocol Cache
   (add [this item] "Add an item to the cache")
   (check [this item] "Check whether item is in cache.")
   #_(revoke [this item] "Remove an item from cache."))
 
-
 (comment
   (def dll (DoublyLinkedList.))
-  (def node1 (DoublyLinkedList$Node. dll))
-  (def node2 (DoublyLinkedList$Node. dll))
+  (def node1 (DoublyLinkedList$Node. 1))
+  (def node2 (DoublyLinkedList$Node. 2))
 
   (= node1 node1)
   (.add dll node1)
   (= node1 (.pop dll))
-  (.add dll (DoublyLinkedList$Node. dll 1))
+  (.add dll (DoublyLinkedList$Node. 1))
 
   (def ht (ConcurrentHashMap.))
   (def hash-fn (comp bytes->murmur-hash string->bytes))
@@ -39,80 +51,95 @@
 
   )
 
-(def lock (atom false))
+(defprotocol Cleanup
+  (getCleanup [this])
+  (setCleanup [this x])
+  (getCleanupCounter [this])
+  (setCleanupCoutner [this x])
+  (clearCleanup [this]))
 
+;; IMPORTANT !!! this function should be called by only 1 thread
 (defn- cleaning-up [lru-cache]
   (let [dll (.dll lru-cache)]
-    (loop [cleanup (.cleanup lru-cache)]
+    (loop [cleanup (getCleanup lru-cache)]
       (when-let [node (first cleanup)]
         (.remove dll node)
         (recur (rest cleanup)))))
-  (set! (.cleanup lru-cache) '())
-  (set! (.cleanup-counter lru-cache) 0)
-  (while (< (.max-fill lru-cache) (.size (.ht lru-cache)))
-    (let [dll (.dll lru-cache)]
-      (.remove (.ht lru-cache) (.. dll getTail getItem))
-      (.pop dll))))
+  (clearCleanup lru-cache)
+  (let [dll (.dll lru-cache)]
+    (while (< (.max-fill lru-cache) (.size (.ht lru-cache)))
+      (.remove (.ht lru-cache) (.. dll pop getItem)))))
 
-(def ^:dynamic *thread-count* 100)
-(def ^:dynamic *cleanup-threshold* 1.0)
+(def ^:dynamic *cleanup-threshold* 0.0)
+
+(defn- offer [lru-cache item]
+  (let [hashed ((.hash-fn lru-cache) item)
+        ht (.ht lru-cache)
+        dll (.dll lru-cache)
+        old-node (.get ht hashed)]
+    (when (or (nil? old-node) (not= old-node (.getHead dll)))
+      (let [new-node (DoublyLinkedList$Node. hashed)]
+        ;; this lock might be avoided
+        (while (not (compare-and-set! (.lock lru-cache) false true)))
+        (.add dll new-node)
+        (reset! (.lock lru-cache) false)
+        (when-let [old-node (.put ht hashed new-node)]
+          (setCleanup lru-cache (conj (getCleanup lru-cache) old-node))
+          (setCleanupCoutner lru-cache (inc (getCleanupCounter lru-cache))))))))
 
 (deftype LruCache [max-fill hash-fn dll ht thread-count
                    ^:volatile-mutable cleanup
-                   ^:volatile-mutable cleanup-counter]
+                   ^:volatile-mutable cleanup-counter
+                   lock]
+  Cleanup
+  (getCleanup [this] cleanup)
+  (setCleanup [this x] (set! cleanup x))
+  (getCleanupCounter [this] cleanup-counter)
+  (setCleanupCoutner [this x] (set! cleanup-counter x))
+  (clearCleanup [this]
+    (set! cleanup '())
+    (set! cleanup-counter 0))
+
   Cache
-
   (add [this item]
-    (let [hashed ((.hash-fn this) item)
-          new-node (DoublyLinkedList$Node. dll hashed)
-          ht (.ht this)
-          dll (.dll this)]
-      (when-let [old-node (.get ht hashed)]
-        (when-not (= old-node (.getHead dll))
-          (set! (.cleanup this) (conj (.cleanup this) old-node))
-          (set! (.cleanup-counter this) (inc (.cleanup-counter this)))))
-      (.put ht hashed new-node)
-      (while (not (compare-and-set! lock false true)))
-      (.add dll new-node)
-      (when (< (+ (.max-fill this) (* *cleanup-threshold* *thread-count*))
-               (+ (.size ht) (.cleanup-counter this)))
-        (cleaning-up this))
-      (reset! lock false)))
-
+    (offer this item)
+    (when (and (< (+ (.max-fill this) (* *cleanup-threshold* (.thread-count this)))
+                  (+ (.size ht) (.cleanup-counter this)))
+               (compare-and-set! (.lock this) false true)) ;; important for this to work
+      (cleaning-up this)
+      (reset! (.lock this) false))
+    nil)
   (check [this item]
     (let [hashed ((.hash-fn this) item)]
-      (if-let [old-node (.get (.ht this) hashed)]
-        (let [dll (.dll this)]
-          (if (= old-node (.getHead dll))
-            true
-            (let [new-node (DoublyLinkedList$Node. dll hashed)]
-              (while (not (compare-and-set! lock false true)))
-              (.add dll new-node)
-              (reset! lock false)
-              (set! (.cleanup this) (conj (.cleanup this) old-node))
-              (set! (.cleanup-counter this) (inc (.cleanup-counter this)))
-              true)))
+      (if (.get (.ht this) hashed)
+        (do
+          (offer this item)
+          true)
         false))))
 
 (defn create-lru-cache
-  ([max-fill] (create-lru-cache max-fill string->bytes '()))
-  ([max-fill hash-fn] (create-lru-cache max-fill hash-fn '()))
-  ([max-fill hash-fn data]
-   {:pre [(<= max-fill (count data))]}
+  ([max-fill] (create-lru-cache max-fill string->bytes))
+  ([max-fill hash-fn] (create-lru-cache max-fill hash-fn (* 3 (number-processors))))
+  ([max-fill hash-fn thread-count] (create-lru-cache max-fill hash-fn thread-count '()))
+  ([max-fill hash-fn thread-count data]
    (let [dll (DoublyLinkedList.)
          ht (ConcurrentHashMap. max-fill)
          hash-fn (comp bytes->murmur-hash hash-fn)]
      (loop [data data]
        (when-let [item (first data)]
          (let [hashed (hash-fn item)
-               node (DoublyLinkedList$Node. dll hashed)]
+               node (DoublyLinkedList$Node. hashed)]
            (.add dll node)
            (.put ht hashed node))))
-     (->LruCache max-fill hash-fn dll ht *thread-count* '() 0))))
+     (->LruCache max-fill hash-fn dll ht thread-count '() 0 (atom false)))))
 
 (comment
-  (MurmurHash3/hash128 (string->bytes "abc"))
-  (count (MurmurHash3/hash128 (string->bytes "abc")))
-  (first (MurmurHash3/hash128 (string->bytes "abc")))
+  (def cache (create-lru-cache 2 string->bytes 1))
 
+  (add cache "abc")
+  (check cache "abc")
+  (check cache "foo")
+  (add cache "foo")
+  (add cache "bar")
+  (check cache "abc")
   )
