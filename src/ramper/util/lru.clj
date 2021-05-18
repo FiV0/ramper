@@ -70,7 +70,7 @@
     (while (< (.max-fill lru-cache) (.size (.ht lru-cache)))
       (.remove (.ht lru-cache) (.. dll pop getItem)))))
 
-(def ^:dynamic *cleanup-threshold* 0.0)
+(def ^:dynamic *cleanup-threshold* 1.0)
 
 (defn- offer [lru-cache item]
   (let [hashed ((.hash-fn lru-cache) item)

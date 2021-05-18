@@ -46,16 +46,17 @@
   )
 
 (defn testing-with-threads []
-  (let [func #(future (one-cache-loop entries-per-thread))
+  (let [func #(Thread. (partial one-cache-loop entries-per-thread))
         threads (repeatedly nb-threads func)]
-    (dorun threads)
-    (run! deref threads)))
+    (run! #(.setName % "CacheTesting") threads)
+    (run! #(.start %) threads)
+    (run! #(.join %) threads)))
 
 (comment
   (def time-with-threads (time-taken testing-with-threads))
 
   ;; throughput per second
   (float (/ (* nb-threads entries-per-thread) (/ time-with-threads 1000)))
-  ;; => 183612.58
+  ;; => 178944.23
 
   )
