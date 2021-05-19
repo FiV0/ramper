@@ -39,7 +39,8 @@
 
   ;; throughput per second
   (float (/ (* nb-threads entries-per-thread) (/ time-with-futures 1000)))
-  ;; => 25219.355
+  ;; => 124352.33 without lock for adding at end of dll (not correct)
+  ;; => 25219.355 with lock for adding at end of dll
 
   )
 
@@ -55,5 +56,6 @@
 
   ;; throughput per second
   (float (/ (* nb-threads entries-per-thread) (/ time-with-threads 1000)))
+  ;; => 116434.2 without lock for adding at end of dll (not correct)
 
   )
