@@ -17,6 +17,7 @@
 
 (defrecord MurmurHash [first second])
 
+;; TODO check if the static array could not be used by itself
 (defn bytes->murmur-hash [bytes]
   (let [hash-array (MurmurHash3/hash128 bytes)]
     #_(->MurmurHash (first hash-array) (second hash-array))
@@ -55,7 +56,7 @@
   (getCleanup [this])
   (setCleanup [this x])
   (getCleanupCounter [this])
-  (setCleanupCoutner [this x])
+  (setCleanupCounter [this x])
   (clearCleanup [this]))
 
 ;; IMPORTANT !!! this function should be called by only 1 thread
@@ -85,7 +86,7 @@
         (reset! (.lock lru-cache) false)
         (when-let [old-node (.put ht hashed new-node)]
           (setCleanup lru-cache (conj (getCleanup lru-cache) old-node))
-          (setCleanupCoutner lru-cache (inc (getCleanupCounter lru-cache))))))))
+          (setCleanupCounter lru-cache (inc (getCleanupCounter lru-cache))))))))
 
 (deftype LruCache [max-fill hash-fn dll ht thread-count
                    ^:volatile-mutable cleanup
@@ -95,7 +96,7 @@
   (getCleanup [this] cleanup)
   (setCleanup [this x] (set! cleanup x))
   (getCleanupCounter [this] cleanup-counter)
-  (setCleanupCoutner [this x] (set! cleanup-counter x))
+  (setCleanupCounter [this x] (set! cleanup-counter x))
   (clearCleanup [this]
     (set! cleanup '())
     (set! cleanup-counter 0))
