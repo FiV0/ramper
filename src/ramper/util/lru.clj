@@ -73,20 +73,20 @@
 
 (def ^:dynamic *cleanup-threshold* 1.0)
 
-(defn- offer [lru-cache item]
-  (let [hashed ((.hash-fn lru-cache) item)
-        ht (.ht lru-cache)
+(comment
+  (require '[taoensso.tufte :as tufte]))
+
+(defn- offer [lru-cache hashed]
+  (let [ht (.ht lru-cache)
         dll (.dll lru-cache)
-        old-node (.get ht hashed)]
-    (when (or (nil? old-node) (not= old-node (.getHead dll)))
-      (let [new-node (DoublyLinkedList$Node. hashed)]
-        ;; this lock might be avoided
-        (while (not (compare-and-set! (.lock lru-cache) false true)))
-        (.add dll new-node)
-        (reset! (.lock lru-cache) false)
-        (when-let [old-node (.put ht hashed new-node)]
-          (setCleanup lru-cache (conj (getCleanup lru-cache) old-node))
-          (setCleanupCounter lru-cache (inc (getCleanupCounter lru-cache))))))))
+        new-node (DoublyLinkedList$Node. hashed)]
+    ;; this lock might be avoided
+    ;; (while (not (compare-and-set! (.lock lru-cache) false true)))
+    (.add dll new-node)
+    ;; (reset! (.lock lru-cache) false)
+    (when-let [old-node (.put ht hashed new-node)]
+      (setCleanup lru-cache (conj (getCleanup lru-cache) old-node))
+      (setCleanupCounter lru-cache (inc (getCleanupCounter lru-cache))))))
 
 (deftype LruCache [max-fill hash-fn dll ht thread-count
                    ^:volatile-mutable cleanup
@@ -103,18 +103,19 @@
 
   Cache
   (add [this item]
-    (offer this item)
-    (when (and (< (+ (.max-fill this) (* *cleanup-threshold* (.thread-count this)))
-                  (+ (.size ht) (.cleanup-counter this)))
-               (compare-and-set! (.lock this) false true)) ;; important for this to work
-      (cleaning-up this)
-      (reset! (.lock this) false))
+    (let [hashed ((.hash-fn this) item)]
+      (offer this hashed)
+      (when (and (< (+ (.max-fill this) (* *cleanup-threshold* (.thread-count this)))
+                    (+ (.size ht) (.cleanup-counter this)))
+                 (compare-and-set! (.lock this) false true)) ;; important for this to work
+        (cleaning-up this)
+        (reset! (.lock this) false)))
     nil)
   (check [this item]
     (let [hashed ((.hash-fn this) item)]
-      (if (.get (.ht this) hashed)
+      (if (.containsKey (.ht this) hashed)
         (do
-          (offer this item)
+          (offer this hashed)
           true)
         false))))
 

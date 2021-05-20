@@ -4,7 +4,7 @@
 (defn random-string [n]
   (str (rand-int n)))
 
-(def nb-threads 48)
+(def nb-threads 128)
 (def nb-entries 10M)
 (def cache (lru/create-lru-cache 1000000 lru/string->bytes nb-threads))
 
@@ -17,7 +17,12 @@
       (recur (dec n)))))
 
 (comment
-  (time (one-cache-loop 1000000)))
+  (require '[taoensso.tufte :as tufte])
+
+  (tufte/add-basic-println-handler! {})
+
+  (tufte/profile {}
+                 (time (one-cache-loop 1000000))))
 
 (def entries-per-thread 100000)
 
@@ -55,7 +60,7 @@
   (def time-with-threads (time-taken testing-with-threads))
 
   ;; throughput per second
-  (float (/ (* nb-threads entries-per-thread) (/ time-with-threads 1000)))
+  (float (/ (* nb-threads entries-per-thread) (/ time-with-threads 1000)));; => 226002.67
   ;; => 116434.2 without lock for adding at end of dll (not correct)
 
   )

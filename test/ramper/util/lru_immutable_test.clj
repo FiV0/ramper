@@ -6,7 +6,7 @@
 (defn random-string [n]
   (str (rand-int n)))
 
-(def nb-threads 48)
+(def nb-threads 128)
 (def nb-entries 10M)
 (def cache (lru-im/create-lru-cache {} 1000000 lru/string->bytes))
 
