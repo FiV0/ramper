@@ -56,7 +56,7 @@
   (import '(java.io File))
 
   (let [tmp-file (File/createTempFile "tmp-" "vbyte-test")
-        x-small  228 ;;(rand-int 1000)
+        x-small (rand-int 1000)
         x-large (- (int (/ Integer/MAX_VALUE 2)) 5)]
     (.deleteOnExit tmp-file)
 
@@ -66,4 +66,6 @@
 
     (with-open [is (io/input-stream tmp-file)]
       (assert (= x-small (read-vbyte is)))
-      (assert (= x-large (read-vbyte is))))))
+      (assert (= x-large (read-vbyte is)))))
+
+  )
