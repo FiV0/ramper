@@ -66,6 +66,29 @@
             (when-not (= length actual)
               (throw (IOException. (str "Asked for " length " but got " actual))))))))))
 
+(defprotocol ByteSerializer
+  (to-stream [this os x])
+  (from-stream [this is])
+  (skip [this is]))
+
+(deftype IntByteSerializer []
+  ByteSerializer
+  (to-stream [_ os x] (write-int os x))
+  (from-stream [_ is] (read-int is))
+  (skip [_ is] (skip-int is)))
+
+(deftype LongByteSerializer []
+  ByteSerializer
+  (to-stream [_ os x] (write-long os x))
+  (from-stream [_ is] (read-long is))
+  (skip [_ is] (skip-long is)))
+
+(deftype ArrayByteSerializer []
+  ByteSerializer
+  (to-stream [_ os x] (write-array os x))
+  (from-stream [_ is] (read-array is))
+  (skip [_ is] (skip-array is)))
+
 (comment
   (require '[clojure.java.io :as io])
   (import '(java.io File))
@@ -86,5 +109,4 @@
       (assert (= test-int (read-int is)))
       (skip-array is)
       (assert (= test-long (read-long is)))
-      (assert (java.util.Arrays/equals test-array (read-array is)))
-      )))
+      (assert (java.util.Arrays/equals test-array (read-array is))))))

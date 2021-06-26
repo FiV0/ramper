@@ -14,7 +14,7 @@
   (no-more-append [this] "No more appends will happen as the underlying sieve was closed."))
 
 (defprotocol Sieve
-  "A Sieve guarantees the following properties every key that is enqueued gets dequeued once,
+  "A Sieve guarantees the following property: every key that is enqueued gets dequeued once,
   and once only. It sort of works like a unique filter."
   (enqueue [this key] "Add the given key to the sieve.")
   (close [this] "Closes this sieve forever.")

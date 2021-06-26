@@ -88,6 +88,7 @@
       (setCleanup lru-cache (conj (getCleanup lru-cache) old-node))
       (setCleanupCounter lru-cache (inc (getCleanupCounter lru-cache))))))
 
+;; TODO  replace the explicit lock with locking
 (deftype LruCache [max-fill hash-fn dll ht thread-count
                    ^:volatile-mutable cleanup
                    ^:volatile-mutable cleanup-counter
