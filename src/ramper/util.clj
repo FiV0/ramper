@@ -66,6 +66,13 @@
 
     (with-open [is (io/input-stream tmp-file)]
       (assert (= x-small (read-vbyte is)))
-      (assert (= x-large (read-vbyte is)))))
+      (assert (= x-large (read-vbyte is))))))
 
-  )
+(defn string->bytes [s]
+  (.getBytes s))
+
+(defn bytes->string [bs]
+  (String. bs))
+
+(comment
+  (-> "fooüß" string->bytes bytes->string))

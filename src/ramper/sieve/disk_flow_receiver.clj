@@ -1,8 +1,9 @@
 (ns ramper.sieve.disk-flow-receiver
   (:refer-clojure :exclude [flush])
   (:require [clojure.java.io :as io]
-            [ramper.sieve :refer [FlowReceiver]])
-  (:import (java.io DataOutputStream File FileInputStream FileOutputStream)
+            [ramper.sieve :refer [FlowReceiver prepare-to-append append finish-appending no-more-append]]
+            [ramper.util.byte-serializer :refer [from-stream to-stream]])
+  (:import (java.io DataInputStream DataOutputStream File FileInputStream FileOutputStream)
            (java.util NoSuchElementException)
            (it.unimi.dsi.fastutil.io FastBufferedInputStream FastBufferedOutputStream)))
 
@@ -12,6 +13,8 @@
   (size [this])
   (dequeue-key [this]))
 
+
+;; TODO maybe be add IllegalStateException also when output or input are not set
 (deftype DiskFlowReceiver [serializer base-name
                            ^:volatile-mutable size ^:volatile-mutable append-size
                            ^:volatile-mutable input ^:volatile-mutable input-index
@@ -22,7 +25,7 @@
     (locking this
       (when closed (throw (IllegalStateException.)))
       (set! append-size 0)
-      (set! output (-> (str (.base-name this) output-index)
+      (set! output (-> (str base-name output-index)
                        io/file
                        FileOutputStream.
                        FastBufferedOutputStream.
@@ -32,15 +35,16 @@
     (locking this
       (when closed (throw (IllegalStateException.)))
       (.writeLong output hash)
-      (.. this serializer (toStream output key))
+      (to-stream serializer output key)
       (set! append-size (inc append-size))))
 
   (finish-appending [this]
     (locking this
       (when closed (throw (IllegalStateException.)))
       (.close output)
-      (let [f (io/file (str (.base-name this) output-index))]
-        (if (.length f)
+      (let [f (io/file (str base-name output-index))]
+        (println (.getName f) " + length " (.length f))
+        (if (zero? (.length f))
           (.delete f)
           (set! output-index (inc output-index))))
       (set! size (+ size append-size))
@@ -68,11 +72,37 @@
         (set! input-index (inc input-index))
         (let [f (-> (str base-name input-index) io/file)]
           (.deleteOnExit f)
-          (set! input (-> f FileInputStream. FastBufferedInputStream. DataOutputStream.)))
-        (.readLong input) ; discarding hash for here
-        (set! size (dec size))
-        (.from-steam serializer input)))))
+          (set! input (-> f FileInputStream. FastBufferedInputStream. DataInputStream.))))
+      (.readLong input) ; discarding hash for now
+      (set! size (dec size))
+      (from-stream serializer input))))
 
 (defn disk-flow-receiver [serializer]
   (->DiskFlowReceiver serializer (File/createTempFile (.getSimpleName DiskFlowReceiver) "-tmp")
                       0 0 nil -1 nil 0 false))
+
+(comment
+  (require '[clojure.core.async :as async])
+  (require '[ramper.util.byte-serializer :as serializer])
+  (require '[ramper.util :as util])
+
+  (def receiver (disk-flow-receiver (serializer/->ArrayByteSerializer)))
+
+  (prepare-to-append receiver)
+
+  (loop [i 0]
+    (when (< i 1000)
+      (let [object (util/string->bytes (str "the ultimate number " i))]
+        (append receiver (hash object) object))
+      (recur (inc i))))
+
+  (finish-appending receiver)
+
+  (size receiver)
+
+  (dotimes [n 2]
+    (async/thread
+      (loop []
+        (when-not (zero? (size receiver))
+          (println "Thread " n " dequeued: " (util/bytes->string (dequeue-key receiver)))
+          (recur))))))
