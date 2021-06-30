@@ -1,4 +1,6 @@
 (ns ramper.sieve.bucket
+  "A bucket that holds the current hashes and keys that still need to go through the sieve.
+  See also `ramper.sieve.store.`"
   (:require [clojure.java.io :as io]
             [ramper.util.byte-serializer :refer [from-stream to-stream skip]])
   (:import (it.unimi.dsi.fastutil.io FastBufferedInputStream FastBufferedOutputStream)
