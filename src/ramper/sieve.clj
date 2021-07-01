@@ -17,6 +17,8 @@
   "A Sieve guarantees the following property: every key that is enqueued gets dequeued once,
   and once only. It sort of works like a unique filter."
   (enqueue [this key] "Add the given key to the sieve.")
-  (close [this] "Closes this sieve forever.")
-  (set-flow-receiver [this flow-receiver] "Sets the new flow-receiver for this sieve.")
   (flush [this] "Flushes all pending enqueued keys to the flow-receiver."))
+
+(defprotocol Size
+  "Generic protocol to get the size (number of items) in the data structure."
+  (number-of-items [this]))

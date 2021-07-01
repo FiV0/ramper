@@ -1,5 +1,9 @@
 (ns ramper.sieve.store
-  "A store holds the hashes that have already been processed by the sieve."
+  "A store holds the hashes that have already been processed by the sieve.
+
+  The idea of the store is that hashes are always sorted on disk and that
+  consuming and appending can happen at the same time (through two files).
+  This allows a linear two pointer approach when adding new hashes to the store."
   (:require [clojure.java.io :as io]
             [ramper.util :as util])
   (:import (java.io FileInputStream FileOutputStream IOException)
@@ -13,12 +17,12 @@
 
 (defn store
   "Creates a new store."
-  [new? sieve-dir name buffer-size]
+  [new sieve-dir name buffer-size]
   (let [name (io/file sieve-dir name)]
-    (when (and new? (not (.createNewFile name))) (throw (IOException. (str "Sieve store " name " exists"))))
-    (when (and (not new?) (not (.exists name))) (throw (IOException. (str "Sieve store " name " does not exist"))))
+    (when (and new (not (.createNewFile name))) (throw (IOException. (str "Sieve store " name " exists"))))
+    (when (and (not new) (not (.exists name))) (throw (IOException. (str "Sieve store " name " does not exist"))))
     (->Store name
-             (io/file sieve-dir (str name "-extra"))
+             (io/file sieve-dir (str name "~"))
              (allocate-byte-buffer buffer-size)
              (allocate-byte-buffer buffer-size)
              nil
@@ -34,7 +38,7 @@
                :output-channel (-> (FileOutputStream. output-file) (.getChannel))}))
 
 (defn append
-  "Append a hash to the store."
+  "Append a hash (should be a long) to the store."
   [{:keys [output-buffer output-channel] :as store} hash]
   (.putLong output-buffer hash)
   (when-not (.hasRemaining output-buffer)
@@ -62,3 +66,8 @@
   (when-not (.delete name) (throw (IOException. (str "Cannot delete store " name))))
   (when-not (.renameTo output-file) (throw (IOException. (str "Cannot rename new store file " output-file " to " name))))
   store)
+
+(defn size
+  "The size of the underlying store."
+  [{:keys [name]}]
+  (/ (.length name) (/ Long/SIZE Byte/SIZE)))

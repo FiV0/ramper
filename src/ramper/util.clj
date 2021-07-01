@@ -76,3 +76,8 @@
 
 (comment
   (-> "fooüß" string->bytes bytes->string))
+
+(defn multiple-of-8
+  "Return the largest multiple of 8 no large than `x`."
+  [x]
+  (bit-and x (bit-shift-left -1 3)))
