@@ -28,7 +28,7 @@
 (defn append
   "Add a key to the bucket."
   [{:keys [items size buffer serializer aux-out] :as bucket} hash key]
-  {:pre [(<= items size) (= java.lang.Long hash)]}
+  {:pre [(<= items size) (= java.lang.Long (type hash))]}
   (aset buffer items hash)
   (to-stream serializer aux-out key)
   (conj bucket {:items (inc items)}))

@@ -1,5 +1,5 @@
 (ns ramper.sieve.bucket-test
-  (:require [clojure.test :refer [deftest testing is run-tests]]
+  (:require [clojure.test :refer [deftest testing is]]
             [ramper.sieve.bucket :as bucket]
             [ramper.util :as util]
             [ramper.util.byte-serializer :as serializer]))
@@ -24,3 +24,5 @@
             (bucket/skip-key b))
           (recur (inc cur))))
       (bucket/close b))))
+
+(run-tests)

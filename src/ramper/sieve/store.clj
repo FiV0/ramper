@@ -17,12 +17,12 @@
 
 (defn store
   "Creates a new store."
-  [new sieve-dir name buffer-size]
-  (let [name (io/file sieve-dir name)]
+  [new sieve-dir sieve-name buffer-size]
+  (let [name (io/file sieve-dir sieve-name)]
     (when (and new (not (.createNewFile name))) (throw (IOException. (str "Sieve store " name " exists"))))
     (when (and (not new) (not (.exists name))) (throw (IOException. (str "Sieve store " name " does not exist"))))
     (->Store name
-             (io/file sieve-dir (str name "~"))
+             (io/file sieve-dir (str sieve-name "~"))
              (allocate-byte-buffer buffer-size)
              (allocate-byte-buffer buffer-size)
              nil
@@ -64,8 +64,8 @@
   (.close output-channel)
   (.close input-channel)
   (when-not (.delete name) (throw (IOException. (str "Cannot delete store " name))))
-  (when-not (.renameTo output-file) (throw (IOException. (str "Cannot rename new store file " output-file " to " name))))
-  store)
+  (when-not (.renameTo output-file name) (throw (IOException. (str "Cannot rename new store file " output-file " to " name))))
+  (conj store {:input-channel nil :output-channel nil}))
 
 (defn size
   "The size of the underlying store."
