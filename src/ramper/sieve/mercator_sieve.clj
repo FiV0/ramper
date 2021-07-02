@@ -5,8 +5,8 @@
                                   Sieve enqueue flush
                                   Size number-of-items]
              :as sieve]
-            [ramper.sieve.bucket :as bucket]
-            [ramper.sieve.store :as store])
+            [ramper.sieve.bucket :as bucket-api]
+            [ramper.sieve.store :as store-api])
   (:import (it.unimi.dsi.fastutil.ints IntArrays)
            (it.unimi.dsi.fastutil.longs LongArrays)))
 
@@ -44,8 +44,8 @@
                                  :store-buffer-size store-buffer-size
                                  :aux-buffer-size aux-buffer-size})
   (->MercatorSieve receiver serializer hash-function
-                   (bucket/bucket serializer sieve-size aux-buffer-size sieve-dir)
-                   (store/store new sieve-dir "store" store-buffer-size)
+                   (bucket-api/bucket serializer sieve-size aux-buffer-size sieve-dir)
+                   (store-api/store new sieve-dir "store" store-buffer-size)
                    false
                    (make-array Integer/TYPE sieve-size)))
 
@@ -63,8 +63,8 @@
     (when closed (throw (IllegalStateException.)))
     (let [hash (hash-function key)]
       (locking sieve
-        (bucket/append bucket hash key)
-        (if (bucket/is-full? bucket)
+        (bucket-api/append bucket hash key)
+        (if (bucket-api/is-full? bucket)
           (do (flush sieve) true)
           false))))
 
@@ -73,11 +73,11 @@
       (let [start (System/nanoTime)]
         (if (zero? (number-of-items bucket))
           (throw (IllegalStateException. "No new items in sieve."))
-          (let [store (store/open store)
-                store-size (store/size store)
+          (let [store (store-api/open store)
+                store-size (store-api/size store)
                 number-of-bucket-items (number-of-items bucket)
                 _ (fill-array-consecutive position)
-                {:keys [buffer]} bucket]
+                buffer (bucket-api/get-buffer bucket)]
             (LongArrays/parallelRadixSortIndirect position buffer 0 number-of-bucket-items false)
             (LongArrays/stabilize position buffer 0 number-of-bucket-items)
             (loop [next (if-not (zero? store-size) (.consume store) -1)
@@ -100,22 +100,22 @@
                     ;; or the new key comes before the next key in the store
                     (or (= store-position store-size)
                         (< hash next))
-                    (do (.append store hash)
+                    (do (store-api/append store hash)
                         (recur next store-position (inc new-hashes) new-j new-dups))
                     ;; existing key
                     ;; invalidate position and get next hash from store
                     (= hash next)
-                    (do (.append store hash)
+                    (do (store-api/append store hash)
                         (aset position j Integer/MAX_VALUE)
-                        (recur (if (< store-position (dec store-size)) (.consume store) next)
+                        (recur (if (< store-position (dec store-size)) (store-api/consume store) next)
                                (inc store-position)
                                new-hashes
                                new-j
                                new-dups))
                     ;; old key, just append
                     (< next hash)
-                    (do (.append store next)
-                        (recur (if (< store-position (dec store-size)) (.consume store) next)
+                    (do (store-api/append store next)
+                        (recur (if (< store-position (dec store-size)) (store-api/consume store) next)
                                (inc store-position)
                                new-hashes
                                new-j
@@ -125,9 +125,8 @@
                   ;; to the new store
                   (loop [store-position store-position next next]
                     (when (< store-position store-size)
-                      (.append store next)
-                      (recur (inc store-position) (if (< store-position (dec store-size)) (.consume store) next))))
-                  (.close store)
+                      (store-api/append store next)
+                      (recur (inc store-position) (if (< store-position (dec store-size)) (store-api/consume store) next))))
                   (log/info :mercator-sort+fusion-completed
                             {:hashes (+ store-size new-hashes)
                              :time (/ (- start (System/nanoTime)) 1e9)}))))
@@ -141,14 +140,14 @@
                 (let [pos (aget position j)]
                   (if (< bucket-position pos) ;; a duplicate key
                     (do
-                      (bucket/skip-key bucket)
+                      (bucket-api/skip-key bucket)
                       (recur j (inc bucket-position)))
                     (do
-                      (append serializer (aget buffer pos) (bucket/consume-key bucket))
+                      (append serializer (aget buffer pos) (bucket-api/consume-key bucket))
                       (recur (inc j) (inc bucket-position)))))
                 ;; here j is actually equal to the number of items added to the bucket
                 (let [dups (- number-of-bucket-items j)]
-                  (bucket/clear bucket)
+                  (bucket-api/clear bucket)
                   (finish-appending receiver)
                   (log/info :mercator-end-flow-receiver-appending
                             {:new-keys j
@@ -156,4 +155,5 @@
                              :unique-key-ratio (* 100.0 (/ dups number-of-bucket-items))}))))
             (let [duration (max (- (System/nanoTime) start) 1)]
               (log/info :mercator-flush-completed
-                        {:total-time (/ duration 1e9)}))))))))
+                        {:total-time (/ duration 1e9)})
+              (conj sieve {:store (store-api/close store)}))))))))
