@@ -77,17 +77,26 @@
   (from-stream [_ is] (read-int is))
   (skip [_ is] (skip-int is)))
 
+(defn int-byte-serializer []
+  (->IntByteSerializer))
+
 (deftype LongByteSerializer []
   ByteSerializer
   (to-stream [_ os x] (write-long os x))
   (from-stream [_ is] (read-long is))
   (skip [_ is] (skip-long is)))
 
+(defn long-byte-serializer []
+  (->LongByteSerializer))
+
 (deftype ArrayByteSerializer []
   ByteSerializer
   (to-stream [_ os x] (write-array os x))
   (from-stream [_ is] (read-array is))
   (skip [_ is] (skip-array is)))
+
+(defn array-byte-serializer []
+  (->ArrayByteSerializer))
 
 (comment
   (require '[clojure.java.io :as io])

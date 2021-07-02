@@ -1,6 +1,7 @@
 (ns ramper.util
   "Utility functions for ramper."
   (:import (java.io InputStream OutputStream)
+           (java.nio.file Files)
            (it.unimi.dsi.bits Fast)))
 
 (defn vbyte-length
@@ -81,3 +82,12 @@
   "Return the largest multiple of 8 no large than `x`."
   [x]
   (bit-and x (bit-shift-left -1 3)))
+
+(defn temp-dir
+  "Generate a temporary directory in the default temporary-file directory."
+  [prefix]
+  (-> (Files/createTempDirectory prefix (into-array java.nio.file.attribute.FileAttribute []))
+      .toFile))
+
+(comment
+  (temp-dir "foo"))

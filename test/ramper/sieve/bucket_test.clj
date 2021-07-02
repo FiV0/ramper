@@ -24,5 +24,3 @@
             (bucket/skip-key b))
           (recur (inc cur))))
       (bucket/close b))))
-
-(run-tests)
