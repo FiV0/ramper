@@ -98,6 +98,15 @@
 (defn array-byte-serializer []
   (->ArrayByteSerializer))
 
+(deftype StringByteSerializer []
+  ByteSerializer
+  (to-stream [_ os x] (->> x util/string->bytes (write-array os)))
+  (from-stream [_ is] (-> (read-array is) util/bytes->string))
+  (skip [_ is] (skip-array is)))
+
+(defn string-byte-serializer []
+  (->StringByteSerializer))
+
 (comment
   (require '[clojure.java.io :as io])
   (import '(java.io File))
