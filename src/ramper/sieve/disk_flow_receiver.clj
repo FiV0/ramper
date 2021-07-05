@@ -43,7 +43,6 @@
       (when closed (throw (IllegalStateException.)))
       (.close output)
       (let [f (io/file (str base-name output-index))]
-        (println (.getName f) " + length " (.length f))
         (if (zero? (.length f))
           (.delete f)
           (set! output-index (inc output-index))))

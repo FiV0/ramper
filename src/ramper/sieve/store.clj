@@ -71,3 +71,16 @@
   "The size of the underlying store."
   [{:keys [name]}]
   (/ (.length name) (/ Long/SIZE Byte/SIZE)))
+
+(defn check-store
+  "For internal use only!!!"
+  [store]
+  (let [store (open store)
+        s (size store)]
+    (loop [res []]
+      (if (< (count res) s)
+        (recur (conj res (consume store)))
+        (when (or (not= res (vec (sort res)))
+                  (not= (count res) (count (set res))))
+          (throw (IllegalStateException. "Store inconsitent !!!")))))
+    (close store)))

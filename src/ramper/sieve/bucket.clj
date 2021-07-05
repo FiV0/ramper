@@ -2,7 +2,7 @@
   "A bucket that holds the current hashes and keys that still need to go through the sieve.
   See also `ramper.sieve.store.`"
   (:require [clojure.java.io :as io]
-            [ramper.sieve :refer [Size]]
+            [ramper.sieve :refer [Size number-of-items]]
             [ramper.util.byte-serializer :refer [from-stream to-stream skip]])
   (:import (it.unimi.dsi.fastutil.io FastBufferedInputStream FastBufferedOutputStream)
            (java.io FileInputStream FileOutputStream)))
@@ -19,7 +19,7 @@
     (->Bucket serializer
               0
               bucket-size
-              (make-array Long/TYPE buffer-size)
+              (make-array Long/TYPE bucket-size)
               aux-file
               nil
               (FastBufferedOutputStream. (FileOutputStream. aux-file) io-buffer)
@@ -28,7 +28,7 @@
 (defn append
   "Add a key to the bucket."
   [{:keys [items size buffer serializer aux-out] :as bucket} hash key]
-  {:pre [(<= items size) (= java.lang.Long (type hash))]}
+  {:pre [(< items size) (= java.lang.Long (type hash))]}
   (aset buffer items hash)
   (to-stream serializer aux-out key)
   (conj bucket {:items (inc items)}))
