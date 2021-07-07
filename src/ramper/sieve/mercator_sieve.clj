@@ -123,7 +123,7 @@
                         (append receiver (aget buffer pos) (bucket-api/consume-key bucket))
                         (recur (inc j) (inc bucket-position)))))
                   ;; here j is actually equal to the number of items that made it through the sieve
-                  (let [dups (- number-of-bucket-items (inc j))]
+                  (let [dups (- number-of-bucket-items j)]
                     (set! bucket (bucket-api/clear bucket))
                     (finish-appending receiver)
                     (log/info :mercator-end-flow-receiver-appending

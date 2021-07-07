@@ -1,8 +1,7 @@
 (ns ramper.sieve.mercator-sieve-test
   (:require
    [io.pedestal.log :as log]
-   [clojure.core.async :as async]
-   [clojure.test :refer [deftest is testing run-tests]]
+   [clojure.test :refer [deftest is testing]]
    [ramper.sieve.disk-flow-receiver :as receiver]
    [ramper.sieve :as sieve :refer [no-more-append]]
    [ramper.sieve.mercator-sieve :as mercator-sieve]
@@ -37,8 +36,7 @@
     (let [r (receiver/disk-flow-receiver (serializer/string-byte-serializer))
           s (mercator-sieve/mercator-seive true (util/temp-dir "tmp-sieve") 128 32
                                            32 r (serializer/string-byte-serializer) hash')
-          number-items (+ 100 (rand-int 2))
-          ;; (rand-int 24)
+          number-items (+ 100 (rand-int 1024))
           items  (repeatedly number-items (partial random-string number-items))
           enqueued (atom #{})
           nb-threads 25
@@ -53,5 +51,31 @@
       (let [dequeued (reduce (fn [res _] (conj res (receiver/dequeue-key r)))
                              #{}
                              (range (count @enqueued)))]
-
         (is (= @enqueued dequeued) "enqueued and dequeued sets must be equal")))))
+
+(deftest mercator-sieve-multi-threaded-parallel-dequeue
+  (testing "mercator sieve multithreaed enqueueing, parallel dequeueing"
+    (let [r (receiver/disk-flow-receiver (serializer/string-byte-serializer))
+          s (mercator-sieve/mercator-seive true (util/temp-dir "tmp-sieve") 128 32
+                                           32 r (serializer/string-byte-serializer) hash')
+          number-items (+ 100 (rand-int 2))
+          items  (repeatedly number-items (partial random-string number-items))
+          enqueued (atom #{})
+          dequeued (atom #{})
+          cnt (atom 0)
+          nb-threads 25
+          nb-items-per-thread 25
+          enqueue-threads (repeatedly nb-threads #(future
+                                                    (dotimes [_ nb-items-per-thread]
+                                                      (let [item (rand-nth items)]
+                                                        (sieve/enqueue s item)
+                                                        (swap! enqueued conj item)))))
+          dequeue-threads (repeatedly nb-threads #(future
+                                                    (dotimes [_ nb-items-per-thread]
+                                                      (let [item-nb (swap! cnt inc)]
+                                                        (when (<= item-nb (count @enqueued))
+                                                          (swap! dequeued conj (receiver/dequeue-key r)))))))]
+      (run! deref enqueue-threads)
+      (sieve/flush s)
+      (run! deref dequeue-threads)
+      (is (= @enqueued @dequeued) "enqueued and dequeued sets must be equal"))))
