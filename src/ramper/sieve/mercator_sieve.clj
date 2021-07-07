@@ -54,52 +54,47 @@
                   number-of-bucket-items (number-of-items bucket)
                   _ (fill-array-consecutive position number-of-bucket-items)
                   buffer (bucket-api/get-buffer bucket)]
-              (log/info :mercator-sorting {:number-of-items number-of-bucket-items
-                                           :position (areduce position i ret #{} (if (<= 128 (aget position i))
-                                                                                   (conj ret (aget position i))
-                                                                                   ret))})
               (LongArrays/parallelRadixSortIndirect position buffer 0 number-of-bucket-items false)
               (LongArrays/stabilize position buffer 0 number-of-bucket-items)
-              (loop [next (if-not (zero? store-size) (store-api/consume store) -1)
+              (loop [next (if-not (zero? store-size) (store-api/consume store) nil)
                      store-position 0
                      new-hashes 0
                      j 0
-                     dups 0]
+                     dups 0
+                     last-hash nil]
                 (if (< j number-of-bucket-items)
-                  (let [hash (aget buffer (aget position j))
-                        ;; this invalidates duplicates
-                        [new-j new-dups] (loop [k (inc j) dups dups]
-                                           (if (and (< k number-of-bucket-items)
-                                                    (= hash (aget buffer (aget position k))))
-                                             (do
-                                               (aset position k Integer/MAX_VALUE)
-                                               (recur (inc k) (inc dups)))
-                                             [k dups]))]
+                  (let [hash (aget buffer (aget position j))]
                     (cond
+                      ;; a duplicate in the bucket, invalidate it
+                      (= hash last-hash)
+                      (do (aset position j Integer/MAX_VALUE)
+                          (recur next store-position new-hashes (inc j) (inc dups) hash))
                       ;; no more hashes in the store
                       ;; or the new key comes before the next key in the store
                       (or (= store-position store-size)
                           (< hash next))
                       (do (store-api/append store hash)
-                          (recur next store-position (inc new-hashes) new-j new-dups))
+                          (recur next store-position (inc new-hashes) (inc j) dups hash))
                       ;; existing key
                       ;; invalidate position and get next hash from store
                       (= hash next)
                       (do (store-api/append store hash)
                           (aset position j Integer/MAX_VALUE)
-                          (recur (if (< store-position (dec store-size)) (store-api/consume store) next)
+                          (recur (if (< store-position (dec store-size)) (store-api/consume store) nil)
                                  (inc store-position)
                                  new-hashes
-                                 new-j
-                                 new-dups))
-                      ;; old key, just append
-                      (< next hash)
+                                 (inc j)
+                                 dups
+                                 hash))
+                      ;; old key, just append, i.e (< next hash)
+                      :else
                       (do (store-api/append store next)
-                          (recur (if (< store-position (dec store-size)) (store-api/consume store) next)
+                          (recur (if (< (inc store-position) store-size) (store-api/consume store) nil)
                                  (inc store-position)
                                  new-hashes
-                                 new-j
-                                 new-dups))))
+                                 j
+                                 dups
+                                 nil))))
                   (do
                     ;; no more hashes in the bucket, but we still write the remaining ones
                     ;; to the new store
@@ -109,6 +104,7 @@
                         (recur (inc store-position) (if (< store-position (dec store-size)) (store-api/consume store) next))))
                     (log/info :mercator-sort+fusion-completed
                               {:hashes (+ store-size new-hashes)
+                               :new-hashes new-hashes
                                :unique-key-ration (- 100.0 (* 100.0 (/ dups number-of-bucket-items)))
                                :time (/ (- (System/nanoTime) start) 1e9)}))))
 
@@ -127,7 +123,7 @@
                         (append receiver (aget buffer pos) (bucket-api/consume-key bucket))
                         (recur (inc j) (inc bucket-position)))))
                   ;; here j is actually equal to the number of items that made it through the sieve
-                  (let [dups (- number-of-bucket-items j)]
+                  (let [dups (- number-of-bucket-items (inc j))]
                     (set! bucket (bucket-api/clear bucket))
                     (finish-appending receiver)
                     (log/info :mercator-end-flow-receiver-appending

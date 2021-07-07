@@ -41,7 +41,7 @@
           ;; (rand-int 24)
           items  (repeatedly number-items (partial random-string number-items))
           enqueued (atom #{})
-          nb-threads 2
+          nb-threads 25
           nb-items-per-thread 25
           threads (repeatedly nb-threads #(future
                                             (dotimes [_ nb-items-per-thread]
@@ -53,6 +53,5 @@
       (let [dequeued (reduce (fn [res _] (conj res (receiver/dequeue-key r)))
                              #{}
                              (range (count @enqueued)))]
-        (is (= @enqueued dequeued) "enqueued and dequeued sets must be equal")))))
 
-(mercator-sieve-multi-threaded-sequential-dequeue)
+        (is (= @enqueued dequeued) "enqueued and dequeued sets must be equal")))))
