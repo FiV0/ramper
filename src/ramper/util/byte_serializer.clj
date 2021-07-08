@@ -66,6 +66,8 @@
             (when-not (= length actual)
               (throw (IOException. (str "Asked for " length " but got " actual))))))))))
 
+;; TODO this is broken conceptually
+
 (defprotocol ByteSerializer
   (to-stream [this os x])
   (from-stream [this is])
