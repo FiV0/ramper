@@ -1,5 +1,6 @@
 (ns ramper.util.byte-serializer
-  (:require [ramper.util :as util])
+  (:require [ramper.util :as util]
+            [taoensso.nippy :as nippy])
   (:import (java.io DataInputStream DataOutputStream EOFException
                     InputStream OutputStream IOException)
            (it.unimi.dsi.fastutil.io FastBufferedInputStream)))
@@ -108,6 +109,15 @@
 
 (defn string-byte-serializer []
   (->StringByteSerializer))
+
+(deftype DataByteSerializer []
+  ByteSerializer
+  (to-stream [this os x] (->> x nippy/freeze write-array os))
+  (from-stream [this is] (-> is read-array nippy/thaw))
+  (skip [this is] (-> is skip-array)))
+
+(defn data-byte-serializer []
+  (->DataByteSerializer))
 
 (comment
   (require '[clojure.java.io :as io])

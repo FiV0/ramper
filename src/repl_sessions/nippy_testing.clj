@@ -10,19 +10,18 @@
 (defn queue-rec [data name]
   (->QueueRec (into clojure.lang.PersistentQueue/EMPTY data) name))
 
-(deftype QueueRecByteSerializer []
+(deftype DataByteSerializer []
   ByteSerializer
   (to-stream [this os x] (->> x nippy/freeze (serializer/write-array os)))
   (from-stream [this is] (-> is serializer/read-array nippy/thaw))
   (skip [this is] (-> is serializer/skip-array)))
 
-(defn queue-rec-serializer []
-  (->QueueRecByteSerializer))
-
+(defn data-byte-serializer []
+  (->DataByteSerializer))
 
 (let [tmp-file (File/createTempFile "tmp-" "nippy-serializer-test")
       data '(1 2 3)
-      serializer (queue-rec-serializer)]
+      serializer (data-byte-serializer)]
   (.deleteOnExit tmp-file)
 
   (with-open [os (io/output-stream tmp-file)]
@@ -35,5 +34,6 @@
         (recur (conj res (from-stream serializer is)) (inc i))
         res))))
 
-(-> *1 (nth 2) :queue seq)
-(-> *2 (nth 2) :name )
+(-> *1 (nth 2) type)
+(-> *2 (nth 2) :queue seq)
+(-> *3 (nth 2) :name )
