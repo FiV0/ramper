@@ -1,9 +1,9 @@
 (ns ramper.util.byte-serializer
   (:require [ramper.util :as util]
             [taoensso.nippy :as nippy])
-  (:import (java.io DataInputStream DataOutputStream EOFException
-                    InputStream OutputStream IOException)
-           (it.unimi.dsi.fastutil.io FastBufferedInputStream)))
+  (:import (it.unimi.dsi.fastutil.io FastBufferedInputStream)
+           (java.io DataInputStream DataOutputStream EOFException
+                    InputStream OutputStream IOException)))
 
 (defn read-int
   "Reads an `java.lang.Integer` from an InputStream `is`."

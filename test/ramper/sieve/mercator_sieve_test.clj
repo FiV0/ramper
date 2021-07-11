@@ -1,12 +1,11 @@
 (ns ramper.sieve.mercator-sieve-test
-  (:require
-   [io.pedestal.log :as log]
-   [clojure.test :refer [deftest is testing]]
-   [ramper.sieve.disk-flow-receiver :as receiver]
-   [ramper.sieve :as sieve :refer [no-more-append]]
-   [ramper.sieve.mercator-sieve :as mercator-sieve]
-   [ramper.util :as util]
-   [ramper.util.byte-serializer :as serializer]))
+  (:require [clojure.test :refer [deftest is testing]]
+            [io.pedestal.log :as log]
+            [ramper.sieve :as sieve :refer [no-more-append]]
+            [ramper.sieve.disk-flow-receiver :as receiver]
+            [ramper.sieve.mercator-sieve :as mercator-sieve]
+            [ramper.util :as util]
+            [ramper.util.byte-serializer :as serializer]))
 
 (defn hash' [x] (-> x hash long))
 
