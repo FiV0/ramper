@@ -1,5 +1,6 @@
 (ns ramper.util
   "Utility functions for ramper."
+  (:require [clojure.string :as str])
   (:import (java.io InputStream OutputStream)
            (java.nio.file Files)
            (it.unimi.dsi.bits Fast)))
@@ -69,6 +70,8 @@
       (assert (= x-small (read-vbyte is)))
       (assert (= x-large (read-vbyte is))))))
 
+;; TODO maybe move string utilities to extra ns
+
 (defn string->bytes [s]
   (.getBytes s))
 
@@ -77,6 +80,9 @@
 
 (comment
   (-> "fooüß" string->bytes bytes->string))
+
+(defn compare-ignore-case [s1 s2]
+  (= (str/lower-case s1) (str/lower-case s2)))
 
 (defn multiple-of-8
   "Return the largest multiple of 8 no large than `x`."
