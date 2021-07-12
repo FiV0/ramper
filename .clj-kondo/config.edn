@@ -1,4 +1,5 @@
-{:lint-as {}
+{:lint-as {taoensso.nippy/extend-freeze clojure.core/extend-type
+           taoensso.nippy/extend-thaw clojure.core/extend-type}
  :output {:exclude-files []}
  :skip-args []
  :skip-comments true

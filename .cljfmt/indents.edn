@@ -1,0 +1,4 @@
+;; TODO check if this is correct
+{as->                [[:block 1]]
+ nippy/extend-freeze [[:inner 0]]
+ nippy/extend-thaw   [[:inner 0]]}
