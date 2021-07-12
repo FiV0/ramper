@@ -17,7 +17,7 @@
   "Parses a robot txt as string.
 
   Returns a map of
-  -`:disallow`- the disallowed path
+  -`:disallow`- the disallowed paths, sorted
   -`:crawl-delay`- the crawl delay if present
   -`:sitemap` - the sitemap url if present"
   ([txt] (parse-robots-txt txt ramper-agent))
@@ -53,9 +53,10 @@
 
            :else ;; something else
            (recur lines res relevant)))
-       res))))
+       (update res :disallow sort)))))
 
 ;; TODO optimisation with streams from http response directly
+;; TODO sort prefix free disallow
 
 (comment
   (def txt (slurp (str (robots-txt "https://news.ycombinator.com/foo/"))))

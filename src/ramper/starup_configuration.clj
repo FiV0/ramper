@@ -12,7 +12,9 @@
                                       :ramper/root-dir
                                       :ramper/seed-file
                                       :ramper/user-agent
-                                      :ramper/user-agent-from]))
+                                      :ramper/user-agent-from
+                                      :ramper/ip-delay
+                                      :ramper/ip-delay-scheme-authority]))
 
 (defn read-config
   "Read the config from `file` or from a default config."
