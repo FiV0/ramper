@@ -1,4 +1,4 @@
-(ns workbench.visit-state
+(ns ramper.workbench.visit-state
   (:require [taoensso.nippy :as nippy])
   (:import [java.util.concurrent TimeUnit]))
 
