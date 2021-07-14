@@ -40,21 +40,23 @@
 (defn append
   "Append a hash (should be a long) to the store."
   [{:keys [output-buffer output-channel] :as store} hash]
-  (.putLong output-buffer hash)
-  (when-not (.hasRemaining output-buffer)
-    (.flip output-buffer)
-    (.write output-channel output-buffer)
-    (.clear output-buffer))
-  store)
+  (io! "`append` of Store called in transaction!"
+       (.putLong output-buffer hash)
+       (when-not (.hasRemaining output-buffer)
+         (.flip output-buffer)
+         (.write output-channel output-buffer)
+         (.clear output-buffer))
+       store))
 
 (defn consume
   "Consume a hash from the store."
   [{:keys [input-buffer input-channel]}]
-  (when-not (.hasRemaining input-buffer)
-    (.clear input-buffer)
-    (.read input-channel input-buffer)
-    (.flip input-buffer))
-  (.getLong input-buffer))
+  (io! "`consume` of Store called in transaction!"
+       (when-not (.hasRemaining input-buffer)
+         (.clear input-buffer)
+         (.read input-channel input-buffer)
+         (.flip input-buffer))
+       (.getLong input-buffer)))
 
 (defn close
   "Close a store."

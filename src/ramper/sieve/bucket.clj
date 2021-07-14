@@ -29,9 +29,10 @@
   "Add a key to the bucket."
   [{:keys [items size buffer serializer aux-out] :as bucket} hash key]
   {:pre [(< items size) (= java.lang.Long (type hash))]}
-  (aset buffer items hash)
-  (to-stream serializer aux-out key)
-  (conj bucket {:items (inc items)}))
+  (io! "`append` of Bucket called in transaction!"
+       (aset buffer items hash)
+       (to-stream serializer aux-out key)
+       (conj bucket {:items (inc items)})))
 
 (defn is-full?
   "Check if the bucket is full."
@@ -48,13 +49,15 @@
   "Consume a key from the bucket."
   [{:keys [aux-in serializer]}]
   {:pre [(-> aux-in nil? not)]}
-  (from-stream serializer aux-in))
+  (io! "`consume-key` of Bucket called in transaction!"
+       (from-stream serializer aux-in)))
 
 (defn skip-key
   "Skips a key from the bucket."
   [{:keys [aux-in serializer]}]
   {:pre [(-> aux-in nil? not)]}
-  (skip serializer aux-in))
+  (io! "`skip-key` of Bucket called in transaction!"
+       (skip serializer aux-in)))
 
 (defn clear
   "Clear the bucket for reuse."

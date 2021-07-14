@@ -13,7 +13,6 @@
   (size [this])
   (dequeue-key [this]))
 
-
 ;; TODO maybe be add IllegalStateException also when output or input are not set
 (deftype DiskFlowReceiver [serializer base-name
                            ^:volatile-mutable size ^:volatile-mutable append-size
@@ -32,11 +31,12 @@
                        DataOutputStream.))))
 
   (append [this hash key]
-    (locking this
-      (when closed (throw (IllegalStateException.)))
-      (.writeLong output hash)
-      (to-stream serializer output key)
-      (set! append-size (inc append-size))))
+    (io! "`append` of DiskFlowReceiver called in transaction!"
+         (locking this
+           (when closed (throw (IllegalStateException.)))
+           (.writeLong output hash)
+           (to-stream serializer output key)
+           (set! append-size (inc append-size)))))
 
   (finish-appending [this]
     (locking this
@@ -58,23 +58,24 @@
     (locking this size))
 
   (dequeue-key [this]
-    (locking this
-      (when (and closed (zero? size)) (throw NoSuchElementException))
-      (while (and (not closed) (zero? size))
-        (.wait this)
-        (when (and closed (zero? size)) (throw NoSuchElementException)))
-      (assert (< 0 size) (str size " <= 0"))
-      (while (or (= input-index -1) (zero? (.available input)))
-        (when (not= input-index -1)
-          (.close input)
-          (-> (str base-name input-index) io/file .delete))
-        (set! input-index (inc input-index))
-        (let [f (-> (str base-name input-index) io/file)]
-          (.deleteOnExit f)
-          (set! input (-> f FileInputStream. FastBufferedInputStream. DataInputStream.))))
-      (.readLong input) ; discarding hash for now
-      (set! size (dec size))
-      (from-stream serializer input))))
+    (io! "`dequeue-key` of DiskFlowReceiver called in transaction!"
+         (locking this
+           (when (and closed (zero? size)) (throw NoSuchElementException))
+           (while (and (not closed) (zero? size))
+             (.wait this)
+             (when (and closed (zero? size)) (throw NoSuchElementException)))
+           (assert (< 0 size) (str size " <= 0"))
+           (while (or (= input-index -1) (zero? (.available input)))
+             (when (not= input-index -1)
+               (.close input)
+               (-> (str base-name input-index) io/file .delete))
+             (set! input-index (inc input-index))
+             (let [f (-> (str base-name input-index) io/file)]
+               (.deleteOnExit f)
+               (set! input (-> f FileInputStream. FastBufferedInputStream. DataInputStream.))))
+           (.readLong input) ; discarding hash for now
+           (set! size (dec size))
+           (from-stream serializer input)))))
 
 (defn disk-flow-receiver [serializer]
   (->DiskFlowReceiver serializer (File/createTempFile (.getSimpleName DiskFlowReceiver) "-tmp")
