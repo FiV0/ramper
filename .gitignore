@@ -13,3 +13,4 @@ resources/public/ui
 out
 .#*
 .clj-kondo/.cache
+test.log

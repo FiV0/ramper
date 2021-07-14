@@ -2,7 +2,7 @@
   "A thin wrapper around `clojure.data.priority-map` to simulate a priority queue."
   (:require [clojure.data.priority-map :as priority-map]))
 
-;;TODO can this be made compatible with `count`
+;; TODO maybe make compatible with printer
 
 (deftype PriorityQueue [queue keyfn]
   Object
@@ -38,7 +38,6 @@
   clojure.lang.Sorted
   (comparator [this] (.comparator (.queue this)))
 
-  ;; here object is [item priority]
   (entryKey [this o] (keyfn o))
 
   (seqFrom [this k ascending]
