@@ -1,4 +1,4 @@
-(ns ramper.workbench.visit-state
+(ns ramper.frontier.workbench.visit-state
   (:require [taoensso.nippy :as nippy])
   (:import [java.util.concurrent TimeUnit]))
 
@@ -11,7 +11,7 @@
 ;; next-fetch - the minimum time when the next fetch for this state is possible.
 ;;              This next-fetch only concerns this scheme and authority pair and
 ;;              might be different to the next-fetch of the workbench entry. See
-;;              also ramper.workbench.workbench-entry.
+;;              also ramper.frontier.workbench.workbench-entry.
 ;; robots-filter - the robots forbidden prefixes
 ;; cookies - cookies associated with this visit state
 ;; last-exception - the last exception that occured for this visit state (if any)

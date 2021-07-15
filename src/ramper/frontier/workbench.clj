@@ -1,7 +1,7 @@
-(ns ramper.workbench
+(ns ramper.frontier.workbench
   (:require [ramper.util.priority-queue :as pq]
-            [ramper.workbench.workbench-entry :as we])
-  (:import (ramper.workbench.workbench_entry WorkbenchEntry)))
+            [ramper.frontier.workbench.workbench-entry :as we])
+  (:import (ramper.frontier.workbench.workbench_entry WorkbenchEntry)))
 
 ;; Workbench documentation
 ;;

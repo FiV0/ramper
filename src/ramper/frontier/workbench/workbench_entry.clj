@@ -1,8 +1,8 @@
-(ns ramper.workbench.workbench-entry
+(ns ramper.frontier.workbench.workbench-entry
   (:refer-clojure :exclude [remove empty?])
-  (:require [ramper.util.priority-queue :as pq])
-  (:import (java.net InetAddress)
-           (ramper.workbench.visit_state VisitState)))
+  (:require [ramper.util.priority-queue :as pq]
+            [ramper.frontier.workbench.visit-state])
+  (:import (ramper.frontier.workbench.visit_state VisitState)))
 
 ;; workbench-entry documentation
 ;;
