@@ -85,7 +85,7 @@
   (= (str/lower-case s1) (str/lower-case s2)))
 
 (defn multiple-of-8
-  "Return the largest multiple of 8 no large than `x`."
+  "Return the largest multiple of 8 no larger than `x`."
   [x]
   (bit-and x (bit-shift-left -1 3)))
 
@@ -97,3 +97,8 @@
 
 (comment
   (temp-dir "foo"))
+
+(defn unix-timestamp
+  "Returns the "
+  []
+  (long (/ (System/currentTimeMillis) 1000)))

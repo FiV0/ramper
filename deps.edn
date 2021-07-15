@@ -39,7 +39,8 @@
   {:extra-paths ["dev"]
    :extra-deps {org.clojure/tools.deps.alpha {:git/url "https://github.com/clojure/tools.deps.alpha.git"
                                               :sha "d77476f3d5f624249462e275ae62d26da89f320b"}
-                com.taoensso/tufte {:mvn/version "2.2.0"}}
+                com.taoensso/tufte {:mvn/version "2.2.0"}
+                fiv0/kusonga {:mvn/version "0.1.0"}}
    :jvm-opts ["-Xverify:none"]}
 
   :test
