@@ -8,4 +8,11 @@ Trying to reinvent the wheel by writing a crawler. Main inspiration and target s
 
 Currently the [dll](https://github.com/FiV0/dll.git) repository also needs to be accessible locally.
 
+### Building
+
+TODO: explain tools.build options
+
+The `pom.xml` at the root of the repo currently only serves for easier Java development
+in combination with IDEs that support Maven integration.
+
 ## License
