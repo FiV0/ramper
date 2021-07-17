@@ -1,4 +1,4 @@
-{:paths ["src" "resources"]
+{:paths ["src/clj" "resources"]
 
  :deps
  {
@@ -44,7 +44,7 @@
    :jvm-opts ["-Xverify:none"]}
 
   :test
-  {:extra-paths ["test"]
+  {:extra-paths ["test/clj"]
    :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.632"}}}}
 
  :mvn/repos

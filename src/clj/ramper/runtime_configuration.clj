@@ -12,3 +12,8 @@
   "An estimation of how many path queries should reside in memory."
   []
   (/ (:ramper/workbench-max-byte-size @runtime-config) 100))
+
+(defn stop?
+  "Returns true when the agent should stop."
+  []
+  (:ramper/stop? @runtime-config))
