@@ -1,4 +1,4 @@
-{:paths ["src/clj" "resources"]
+{:paths ["src/clj" "resources" "target/classes"]
 
  :deps
  {
@@ -37,15 +37,22 @@
  :aliases
  {:dev
   {:extra-paths ["dev"]
-   :extra-deps {org.clojure/tools.deps.alpha {:git/url "https://github.com/clojure/tools.deps.alpha.git"
-                                              :sha "d77476f3d5f624249462e275ae62d26da89f320b"}
+   :extra-deps {org.clojure/tools.deps.alpha {:mvn/version "0.12.994"}
+                #_{:git/url "https://github.com/clojure/tools.deps.alpha.git"
+                   :sha "d77476f3d5f624249462e275ae62d26da89f320b"}
                 com.taoensso/tufte {:mvn/version "2.2.0"}
                 fiv0/kusonga {:mvn/version "0.1.0"}}
    :jvm-opts ["-Xverify:none"]}
 
   :test
   {:extra-paths ["test/clj"]
-   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.632"}}}}
+   :extra-deps  {lambdaisland/kaocha {:mvn/version "1.0.632"}}}
+
+  :build {:extra-deps {io.github.clojure/tools.build {:git/url "https://github.com/clojure/tools.build.git"
+                                                      :sha "fcd265d32c715f606a2602c8b50270f0060d6b4c"
+                                                      ;; :git/tag "v0.1.3" :git/sha "660a71f" ; use once cli version 1.10.3.905 can be used
+                                                      }}
+          :ns-default build}}
 
  :mvn/repos
  {"central"        {:url "https://repo1.maven.org/maven2/"}
