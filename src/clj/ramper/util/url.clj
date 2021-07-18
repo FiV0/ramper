@@ -12,8 +12,8 @@
 
 (def scheme+authority base)
 
-(defn path+query
-  "Returns only the path + quries of an uri-like object as an URI."
+(defn path+queries
+  "Returns only the path + queries of an uri-like object as an URI."
   [uri-like]
   (let [{:keys [path query]} (uri/uri uri-like)]
     (assoc (uri/uri "") :path path :query query)))
@@ -65,4 +65,8 @@
 
   (from-byte-array (to-byte-array (uri/uri "https://harbour.space/")))
 
-  (into {} (uri/uri "https://hello.world/a/path?query=1&second=2#fragment")))
+  (into {} (uri/uri "https://hello.world/a/path?query=1&second=2#fragment"))
+
+  (-> (uri/uri "https://hello.world/a/path?query=1&second=2#fragment") path+queries str)
+
+  )
