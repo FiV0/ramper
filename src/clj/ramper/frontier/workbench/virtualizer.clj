@@ -1,14 +1,16 @@
 (ns ramper.frontier.workbench.virtualizer
   "This namespace helps to \"virtualize\" the workbench so that it's memory footprint
   remains small. It is is essentially a mapping from scheme+authority to path queries.
-  Whenever path queries leave the sieve that currently don't fit into workbench, they
+  Whenever path queries leave the sieve that currently don't fit into the workbench, they
   get written to disk by the virtualizer. When a visit state needs get refilled the
   path queries for that visit state get read as bulk from disk and appended to the visit
   state.
 
   Underneath the virtualizer maps a scheme+authority to a queue of path queries. These
-  path queries a written to append only log files. Garbage collection is performed
-  whenever the occupied and actually used space is too far apart."
+  path queries a written to append only log files. Garbage collection can be performed
+  whenever the ratio occupied and actually used space drops below some threshold.
+
+  IMPORTANT! This structure is not thread-safe."
   (:refer-clojure :exclude [count remove])
   (:require [io.pedestal.log :as log]
             [ramper.frontier.workbench.visit-state :as vs]
