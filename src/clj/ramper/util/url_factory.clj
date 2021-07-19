@@ -1,14 +1,11 @@
 (ns ramper.util.url-factory
   "A test namespace for generating fake urls."
   (:require [clojure.string :as str]
-            [lambdaisland.uri :as uri]))
-
-(defn rand-str [len]
-  (-> (apply str (take len (repeatedly #(char (+ (rand 26) 65)))))
-      str/lower-case))
+            [lambdaisland.uri :as uri]
+            [ramper.util :as util]))
 
 (defn rand-str-seq [len]
-  (repeatedly len #(rand-str (rand-nth (range 3 10)))))
+  (repeatedly len #(util/rand-str (rand-nth (range 3 10)))))
 
 (defn rand-url []
   (-> (uri/map->URI

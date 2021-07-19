@@ -41,7 +41,10 @@
                 #_{:git/url "https://github.com/clojure/tools.deps.alpha.git"
                    :sha "d77476f3d5f624249462e275ae62d26da89f320b"}
                 com.taoensso/tufte {:mvn/version "2.2.0"}
-                fiv0/kusonga {:mvn/version "0.1.0"}}
+                fiv0/kusonga {:mvn/version "0.1.0"}
+                ;; only for testing concurrent queue types
+                com.manigfeald/queue {:git/url "https://github.com/hiredman/queue.git"
+                                      :sha "791e0f0464b09b2a33121fafa958613e735cccc0"}}
    :jvm-opts ["-Xverify:none"]}
 
   :test

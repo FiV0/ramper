@@ -99,6 +99,16 @@
   (temp-dir "foo"))
 
 (defn unix-timestamp
-  "Returns the "
+  "Returns a unix timestamp for now."
   []
   (long (/ (System/currentTimeMillis) 1000)))
+
+(defn number-of-cores
+  "Returns the number of cores available on this machine."
+  []
+  (.availableProcessors (Runtime/getRuntime)))
+
+(defn rand-str
+  "Returns a random string of length `len` in lower"
+  [len]
+  (apply str (take len (repeatedly #(char (+ (rand 26) 97))))))
