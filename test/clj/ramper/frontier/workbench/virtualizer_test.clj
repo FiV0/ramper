@@ -1,6 +1,5 @@
 (ns ramper.frontier.workbench.virtualizer-test
   (:require [clojure.test :refer [deftest is testing]]
-            [clojure.core.async :as async]
             [ramper.frontier.workbench.virtualizer :as virtualizer]
             [ramper.frontier.workbench.visit-state :as vs]
             [ramper.util :as util]

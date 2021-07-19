@@ -44,11 +44,12 @@
   "Dequeues a maximum number of `max-urls` of path+queries from the
   `virtualizer` to the `visit-state`."
   [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state max-urls]
-  (let [key (visit-state-key visit-state)]
-    (loop [visit-state visit-state to-go (min max-urls (.count disk-queues key))]
-      (if (pos? to-go)
-        (recur (vs/enqueue-path-query visit-state (util/bytes->string (.dequeue disk-queues key))) (dec to-go))
-        visit-state))))
+  (io!
+   (let [key (visit-state-key visit-state)]
+     (loop [visit-state visit-state to-go (min max-urls (.count disk-queues key))]
+       (if (pos? to-go)
+         (recur (vs/enqueue-path-query visit-state (util/bytes->string (.dequeue disk-queues key))) (dec to-go))
+         visit-state)))))
 
 (defn count
   "Returns the number of path+queries associated with a visit-state."
@@ -63,12 +64,14 @@
 (defn remove
   "Removes all path+queries associated with the given visit state."
   [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state]
-  (.remove disk-queues (visit-state-key visit-state)))
+  (io!
+   (.remove disk-queues (visit-state-key visit-state))))
 
 (defn enqueue
   "Enqueues a given `url` to the virtualizer for the given `visit-state`."
   [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state url]
-  (.enqueue disk-queues (visit-state-key visit-state) (-> url url/path+queries str util/string->bytes)))
+  (io!
+   (.enqueue disk-queues (visit-state-key visit-state) (-> url url/path+queries str util/string->bytes))))
 
 (defn collect-if
   "Performs garbage collection if the space used is below `threshold` and tries to achieve space
@@ -76,6 +79,7 @@
   ([^WorkbenchVirtualizer virtualizer] (collect-if virtualizer 0.5 0.75))
   ([^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} threshold target-ratio]
    (when (< (.ratio disk-queues) threshold)
-     (log/info :workbench-virtualizer "Start collection ...")
-     (.collect disk-queues target-ratio)
-     (log/info :workbench-virtualizer "Completed collection ..."))))
+     (io!
+      (log/info :workbench-virtualizer "Start collection ...")
+      (.collect disk-queues target-ratio)
+      (log/info :workbench-virtualizer "Completed collection ...")))))

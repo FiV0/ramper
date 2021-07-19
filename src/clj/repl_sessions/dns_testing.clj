@@ -9,8 +9,6 @@
 
 (def addr (InetAddress/getAllByName "www.finnvolkel.com"))
 
-(InetAddress/getByAddress )
-
 (-> addr first .getHostAddress)
 
 (def addr (Address/getAllByName "www.finnvolkel.com"))
