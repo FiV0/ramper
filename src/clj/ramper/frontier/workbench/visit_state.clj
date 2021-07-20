@@ -1,5 +1,6 @@
 (ns ramper.frontier.workbench.visit-state
-  (:require [taoensso.nippy :as nippy])
+  (:require [ramper.util.byte-serializer :as byte-serializer]
+            [taoensso.nippy :as nippy])
   (:import [java.util.concurrent TimeUnit]))
 
 (def robots-path "/robots.txt")
@@ -92,8 +93,36 @@
 (nippy/extend-freeze VisitState :visit-state/serialize
   [this os]
   (.writeUTF os (:scheme+authority this))
-  (.writeUTF os (-> this :path-queries seq)))
+  (byte-serializer/write-array os (-> this :path-queries seq nippy/freeze)))
+
 
 (nippy/extend-thaw :visit-state/serialize
   [is]
-  (visit-state (.readUTF is) (.readUTF is)))
+  (visit-state (.readUTF is) (-> is byte-serializer/read-array nippy/thaw)))
+
+;; version not using byte-serializer
+;; seems to consume a little more memory
+(comment
+  (nippy/extend-freeze VisitState :visit-state/serialize
+    [this os]
+    (.writeUTF os (:scheme+authority this))
+    (let [frozen-path-queries (-> this :path-queries seq nippy/freeze)]
+      (.writeInt os (count frozen-path-queries))
+      (.write os frozen-path-queries)))
+
+
+  (nippy/extend-thaw :visit-state/serialize
+    [is]
+    (let [scheme+authority (.readUTF is)
+          len (.readInt is)
+          ba (byte-array len)]
+      (.readFully is ba)
+      (visit-state scheme+authority (nippy/thaw ba)))))
+
+(comment
+  (def vs (-> (visit-state "https://finnvolkel.com")
+              (enqueue-path-query "/a/foo")
+              (enqueue-path-query "/a/bar")))
+
+  (-> vs nippy/freeze count)
+  (-> vs nippy/freeze nippy/thaw))
