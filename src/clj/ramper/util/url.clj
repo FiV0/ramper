@@ -1,7 +1,9 @@
 (ns ramper.util.url
+  (:refer-clojure :exclude [uri?])
   (:require [clojure.string :as str]
             [lambdaisland.uri :as uri]
-            [lambdaisland.uri.normalize :as normalize]))
+            [lambdaisland.uri.normalize :as normalize])
+  (:import (lambdaisland.uri URI)))
 
 (defn base
   "Returns only the scheme + authority of an uri-like object as
@@ -56,12 +58,20 @@
   [bytes]
   (uri/uri (String. bytes)))
 
+(defn uri?
+  "Returns true if `uri-like` is a lambdaisland.uri.URI."
+  [uri-like]
+  (instance? URI uri-like))
+
 (comment
   (remove-www "https://harbour.space/")
   (remove-www "https://www.harbour.space/foo/bar")
 
   (valid? "mailto:foo@example.com")
   (valid? "https://harbour.space/")
+
+  (uri? "https://harbour.space/")
+  (uri? (uri/uri "https://harbour.space/"))
 
   (from-byte-array (to-byte-array (uri/uri "https://harbour.space/")))
 
