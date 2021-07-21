@@ -5,6 +5,7 @@
  :skip-comments true
  :linters {:consistent-alias {:aliases {datomic.api datomic
                                         io.pedestal.log log
+                                        clojure.core.async async
                                         clojure.string str
                                         clojure.spec.alpha s}}
            :unresolved-symbol {:exclude [(clojure.core.match/match)]}

@@ -41,10 +41,13 @@
        (throw (IOException. (str "Store does not exist, but the crawl is not "
                                  "new; it will not be created: " store-file)))
 
-       is-new (->SimpleStore (FileOutputStream. store-file) (byte-serializer/data-byte-serializer) (Object.))
+       is-new (->SimpleStore (FileOutputStream. store-file)
+                             (byte-serializer/data-byte-serializer)
+                             (Object.))
 
-       :else (->SimpleStore (FileOutputStream. store-file true) (byte-serializer/data-byte-serializer) (Object.))))))
-
+       :else (->SimpleStore (FileOutputStream. store-file true)
+                            (byte-serializer/data-byte-serializer)
+                            (Object.))))))
 
 ;; TODO: can this be merged with above?
 

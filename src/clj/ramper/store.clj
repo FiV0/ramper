@@ -5,7 +5,9 @@
 (defprotocol Store
   (store
     [this url repsonse]
-    [this url repsonse is-duplicate content-digest guessed-charset]))
+    [this url repsonse is-duplicate content-digest guessed-charset]
+    "Stores an url and its response in the store."))
 
 (defprotocol StoreReader
-  (read [this]))
+  (read [this]
+    "Reads a SimpleRecord from the store. Returns nil if no record is available."))
