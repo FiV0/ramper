@@ -2,12 +2,10 @@
   "A simple non parallelized store."
   (:refer-clojure :exclude [read])
   (:require [clojure.java.io :as io]
-            [ramper.store :refer [Store StoreReader]]
+            [ramper.store :as store :refer [Store StoreReader]]
             [ramper.store.simple-record :as simple-record]
             [ramper.util.byte-serializer :as byte-serializer :refer [to-stream from-stream]])
   (:import (java.io Closeable FileInputStream FileOutputStream IOException)))
-
-(def ^:private store-name "simple_store")
 
 ;; SimpleStore documentation
 ;;
@@ -31,7 +29,7 @@
   "Creates a simple store in directory `dir`."
   ([dir] (simple-store dir true))
   ([dir is-new]
-   (let [store-file (io/file dir store-name)]
+   (let [store-file (io/file dir store/store-name)]
      (cond
        (and is-new (.exists store-file) (not (zero? (.length store-file))))
        (throw (IOException. (str "Store exists and it is not empty, but the crawl"
@@ -66,7 +64,7 @@
 (defn simple-store-reader
   "Creates a simple store reader for the directory `dir`."
   ([dir]
-   (let [store-file (io/file dir store-name)]
+   (let [store-file (io/file dir store/store-name)]
      (if (not (.exists store-file))
        (throw (IOException. (str "Store does not exist:" store-file)))
 

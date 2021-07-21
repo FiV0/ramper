@@ -2,6 +2,9 @@
   "A set of protocols for a Store."
   (:refer-clojure :exclude [read]))
 
+;; TODO: find a better solution
+(def store-name "ramper_store")
+
 (defprotocol Store
   (store
     [this url repsonse]

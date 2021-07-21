@@ -2,14 +2,13 @@
   "A parallel SimpleRecord writer."
   (:require [clojure.core.async :as async]
             [clojure.java.io :as io]
-            [ramper.store :refer [Store]]
+            [ramper.store :as store :refer [Store]]
             [ramper.store.simple-record :as simple-record]
             [ramper.util :as util]
             [ramper.util.byte-serializer :as byte-serializer :refer [to-stream]])
   (:import (it.unimi.dsi.fastutil.io FastBufferedOutputStream FastByteArrayOutputStream)
            (java.io Closeable IOException FileOutputStream)))
 
-(def ^:private store-name "parralel_buffered_store")
 (def ^:private output-stream-buffer-size (* 1024 1024))
 
 ;; buffers are FastByteArrayOutputStream that are reused as buffers
@@ -21,7 +20,7 @@
         (async/>!! finished-ch flushing-exception)
         (let [new-flush-exception
               (try
-                (.write output-stream (.-stream buffer) 0 (.-length buffer))
+                (.write output-stream (.-array buffer) 0 (.-length buffer))
                 false
                 (catch Exception e
                   (if (instance? IOException e) e (IOException. e))))]
@@ -54,7 +53,7 @@
   ([dir] (parallel-buffered-store dir true))
   ([dir is-new] (parallel-buffered-store dir is-new (* 2 (util/number-of-cores))))
   ([dir is-new buffer-size]
-   (let [store-file (io/file dir store-name)]
+   (let [store-file (io/file dir store/store-name)]
      (cond
        (and is-new (.exists store-file) (not (zero? (.length store-file))))
        (throw (IOException. (str "Store exists and it is not empty, but the crawl"
