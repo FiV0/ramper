@@ -112,7 +112,7 @@
 
 (deftype DataByteSerializer []
   ByteSerializer
-  (to-stream [this os x] (->> x nippy/freeze write-array os))
+  (to-stream [this os x] (->> x nippy/freeze (write-array os)))
   (from-stream [this is] (-> is read-array nippy/thaw))
   (skip [this is] (-> is skip-array)))
 
