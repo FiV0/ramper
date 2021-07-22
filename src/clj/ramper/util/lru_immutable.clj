@@ -1,7 +1,7 @@
 (ns ramper.util.lru-immutable
+  "A thin wrapper around `clojure.core.cached`"
   (:require [clojure.core.cache.wrapped :as cw]
-            [ramper.util.lru :as lru :refer [Cache add check]])
-  (:import (org.apache.commons.codec.digest MurmurHash3)))
+            [ramper.util.lru :as lru :refer [Cache add check]]))
 
 (deftype LruCacheImmutable [cache hash-fn]
   Cache
