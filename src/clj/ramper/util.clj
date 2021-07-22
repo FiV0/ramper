@@ -1,9 +1,10 @@
 (ns ramper.util
-  "Utility functions for ramper."
+  "General utility functions for ramper."
   (:require [clojure.string :as str])
   (:import (java.io InputStream OutputStream)
            (java.nio.file Files)
-           (it.unimi.dsi.bits Fast)))
+           (it.unimi.dsi.bits Fast)
+           (org.apache.commons.codec.digest MurmurHash3)))
 
 (def runtime (Runtime/getRuntime))
 
@@ -114,3 +115,8 @@
   "Returns a random string of length `len` in lower"
   [len]
   (apply str (take len (repeatedly #(char (+ (rand 26) 97))))))
+
+(defn hash-str
+  "Returns a 128 bit MurmurHash3 of `str`yielding a vector of two longs."
+  [s]
+  (vec (MurmurHash3/hash128 s)))

@@ -1,10 +1,11 @@
 (ns ramper.util.url
+  "Helper functions for working with lambdaisland.uri.URI."
   (:refer-clojure :exclude [uri?])
   (:require [clojure.string :as str]
             [lambdaisland.uri :as uri]
-            [lambdaisland.uri.normalize :as normalize])
-  (:import (org.apache.commons.codec.digest MurmurHash3)
-           (lambdaisland.uri URI)))
+            [lambdaisland.uri.normalize :as normalize]
+            [ramper.util :as util])
+  (:import (lambdaisland.uri URI)))
 
 (defn base
   "Returns only the scheme + authority of an uri-like object as
@@ -69,9 +70,7 @@
   yielding a vector of two longs."
   [url]
   {:pre [(instance? URI url)]}
-  (let [hash-array (MurmurHash3/hash128 (str url))]
-    (vector (first hash-array) (second hash-array))))
-
+  (util/hash-str (str url)))
 
 (comment
   (remove-www "https://harbour.space/")
