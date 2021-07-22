@@ -7,11 +7,6 @@
            (java.util.concurrent ConcurrentHashMap)
            (ramper.util DoublyLinkedList DoublyLinkedList$Node)))
 
-(defn string->bytes
-  "Returns a string as byte array."
-  [s]
-  (bytes (byte-array (map byte s))))
-
 (defrecord MurmurHash [first second])
 
 ;; TODO check if the array could not be used by itself
@@ -21,9 +16,9 @@
     (vector (first hash-array) (second hash-array))))
 
 (comment
-  (MurmurHash3/hash128 (string->bytes "abc"))
-  (count (MurmurHash3/hash128 (string->bytes "abc")))
-  (first (MurmurHash3/hash128 (string->bytes "abc")))
+  (MurmurHash3/hash128 (util/string->bytes "abc"))
+  (count (MurmurHash3/hash128 (util/string->bytes "abc")))
+  (first (MurmurHash3/hash128 (util/string->bytes "abc")))
   )
 
 (defprotocol Cache
@@ -42,7 +37,7 @@
   (.add dll (DoublyLinkedList$Node. 1))
 
   (def ht (ConcurrentHashMap.))
-  (def hash-fn (comp bytes->murmur-hash string->bytes))
+  (def hash-fn (comp bytes->murmur-hash util/string->bytes))
   (.put ht (hash-fn "abc") "foo")
   (.get ht (hash-fn "abc"))
   (.get ht (hash-fn "dadsfasf"))
@@ -119,7 +114,7 @@
 
 ;; TODO use ConcurrentHashMap.KeySetView here instead of the map interface
 (defn create-lru-cache
-  ([max-fill] (create-lru-cache max-fill string->bytes))
+  ([max-fill] (create-lru-cache max-fill util/string->bytes))
   ([max-fill hash-fn] (create-lru-cache max-fill hash-fn (* 3 (util/number-of-cores))))
   ([max-fill hash-fn thread-count] (create-lru-cache max-fill hash-fn thread-count '()))
   ([max-fill hash-fn thread-count data]
@@ -135,7 +130,7 @@
      (->LruCache max-fill hash-fn dll ht thread-count '() 0 (atom false)))))
 
 (comment
-  (def cache (create-lru-cache 2 string->bytes 1))
+  (def cache (create-lru-cache 2 util/string->bytes 1))
 
   (add cache "abc")
   (check cache "abc")
