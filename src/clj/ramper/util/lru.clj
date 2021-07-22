@@ -1,19 +1,16 @@
 (ns ramper.util.lru
-  "A LRU cache implementation using MurmurHash3 128 bit implementation."
+  "A LRU cache implementation using MurmurHash3 128 bit implementation.
+
+  IMPORTANT!!! This is broken and should not be used."
+  (:require [ramper.util :as util])
   (:import (org.apache.commons.codec.digest MurmurHash3)
            (java.util.concurrent ConcurrentHashMap)
-           (java.util.concurrent.atomic AtomicInteger)
            (ramper.util DoublyLinkedList DoublyLinkedList$Node)))
 
 (defn string->bytes
   "Returns a string as byte array."
   [s]
   (bytes (byte-array (map byte s))))
-
-(defn number-processors
-  "Returns the number of processors on this machine."
-  []
-  (.availableProcessors (Runtime/getRuntime)))
 
 (defrecord MurmurHash [first second])
 
@@ -120,9 +117,10 @@
           true)
         false))))
 
+;; TODO use ConcurrentHashMap.KeySetView here instead of the map interface
 (defn create-lru-cache
   ([max-fill] (create-lru-cache max-fill string->bytes))
-  ([max-fill hash-fn] (create-lru-cache max-fill hash-fn (* 3 (number-processors))))
+  ([max-fill hash-fn] (create-lru-cache max-fill hash-fn (* 3 (util/number-of-cores))))
   ([max-fill hash-fn thread-count] (create-lru-cache max-fill hash-fn thread-count '()))
   ([max-fill hash-fn thread-count data]
    (let [dll (DoublyLinkedList.)

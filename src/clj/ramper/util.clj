@@ -5,6 +5,8 @@
            (java.nio.file Files)
            (it.unimi.dsi.bits Fast)))
 
+(def runtime (Runtime/getRuntime))
+
 (defn vbyte-length
   "Returns the length of the vByte encoding of the natural number `x`"
   [^Integer x]
@@ -106,7 +108,7 @@
 (defn number-of-cores
   "Returns the number of cores available on this machine."
   []
-  (.availableProcessors (Runtime/getRuntime)))
+  (.availableProcessors runtime))
 
 (defn rand-str
   "Returns a random string of length `len` in lower"
