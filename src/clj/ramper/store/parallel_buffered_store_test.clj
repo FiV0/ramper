@@ -32,12 +32,17 @@
                                    (store s url resp))))]
       (run! deref threads)
       (.close s)
-      (->> #(future
-              (loop [i 0]
-                (when (< i items-per-thread)
-                  (read sr)
-                  (recur (inc i)))))
-           (repeatedly nb-threads)
-           (run! deref))
+      ;; parallel read
+      #_(->> #(future
+                (loop [i 0]
+                  (when (< i items-per-thread)
+                    (read sr)
+                    (recur (inc i)))))
+             (repeatedly nb-threads)
+             (run! deref))
+      (loop [i 0]
+        (when (< i (* nb-threads items-per-thread))
+          (is (not (nil? (read sr))))
+          (recur (inc i))))
       (is (nil? (read sr)))
       (.close sr))))
