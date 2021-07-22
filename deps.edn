@@ -44,7 +44,11 @@
                 fiv0/kusonga {:mvn/version "0.1.0"}
                 ;; only for testing concurrent queue types
                 com.manigfeald/queue {:git/url "https://github.com/hiredman/queue.git"
-                                      :sha "791e0f0464b09b2a33121fafa958613e735cccc0"}}
+                                      :sha "791e0f0464b09b2a33121fafa958613e735cccc0"}
+
+                ;; only for murmur3 testing for now
+                it.unimi.dsi/sux4j     {:mvn/version "5.2.3"}
+                com.google.guava/guava {:mvn/version "30.1.1-jre"}}
    :jvm-opts ["-Xverify:none"]}
 
   :test
