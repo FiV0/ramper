@@ -38,3 +38,10 @@
 
 (time
  (testing-hash-fn bytes->murmur-hash-guava 1000000))
+
+;; the commons MurmurHash3 also accepts strings
+(defn testing-hash-fn2 [hash-fn iterations]
+  (dotimes [_ iterations]
+    (-> (util/rand-str 20) hash-fn)))
+
+(time (testing-hash-fn2 bytes->murmur-hash-commens 1000000))
