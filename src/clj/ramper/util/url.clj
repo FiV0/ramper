@@ -3,7 +3,8 @@
   (:require [clojure.string :as str]
             [lambdaisland.uri :as uri]
             [lambdaisland.uri.normalize :as normalize])
-  (:import (lambdaisland.uri URI)))
+  (:import (org.apache.commons.codec.digest MurmurHash3)
+           (lambdaisland.uri URI)))
 
 (defn base
   "Returns only the scheme + authority of an uri-like object as
@@ -63,6 +64,15 @@
   [uri-like]
   (instance? URI uri-like))
 
+(defn hash-url
+  "Hashes a lambdaisland.uri.URI with the 128 bit MurmurHash3
+  yielding a vector of two longs."
+  [url]
+  {:pre [(instance? URI url)]}
+  (let [hash-array (MurmurHash3/hash128 (str url))]
+    (vector (first hash-array) (second hash-array))))
+
+
 (comment
   (remove-www "https://harbour.space/")
   (remove-www "https://www.harbour.space/foo/bar")
@@ -79,4 +89,4 @@
 
   (-> (uri/uri "https://hello.world/a/path?query=1&second=2#fragment") path+queries str)
 
-  )
+  (-> (uri/uri "https://harbour.space/") hash-url))
