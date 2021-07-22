@@ -14,7 +14,7 @@
 
 (defrecord MurmurHash [first second])
 
-;; TODO check if the static array could not be used by itself
+;; TODO check if the array could not be used by itself
 (defn bytes->murmur-hash [bytes]
   (let [hash-array (MurmurHash3/hash128 bytes)]
     #_(->MurmurHash (first hash-array) (second hash-array))
