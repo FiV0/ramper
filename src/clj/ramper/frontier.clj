@@ -1,7 +1,10 @@
 (ns ramper.frontier
   "The frontier contains a certain number datastructures shared across different
   threads of an agent."
-  (:require [ramper.frontier.workbench :as workbench]))
+  (:require [ramper.frontier.workbench :as workbench]
+            [ramper.runtime-configuration :as runtime-config]
+            [ramper.util.lru-immutable :as lru]
+            [ramper.util.url :as url]))
 
 (def refill-queue
   "A queue containing visit states that can be refilled. Filled in the \"done\"
@@ -31,6 +34,11 @@
   \"done\" thread. The \"todo\" thread dequeues from it. See also
   ramper.frontier.workbench."
   (atom (workbench/workbench)))
+
+(def url-cache
+  "An url cache for the urls seen recently. This avoids overloading the sieve and
+  catches (apparently) already 90% of duplicates."
+  (lru/create-lru-cache (runtime-config/approximate-url-cache-threshold) url/hash-url))
 
 (defn intiailze-frontier
   "Initializes the frontiers datastructures."

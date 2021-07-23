@@ -6,7 +6,8 @@
   at runtime."
   (:require [ramper.startup-configuration :as sc]))
 
-(def runtime-config (atom {}))
+;; these are the default values
+(def runtime-config (atom {:ramper/url-cache-max-byte-size (* 1024 1024 1024)}))
 
 (defn workbench-size-in-path-queries
   "An estimation of how many path queries should reside in memory."
@@ -17,3 +18,10 @@
   "Returns true when the agent should stop."
   []
   (:ramper/stop? @runtime-config))
+
+(defn approximate-url-cache-threshold
+  "Returns the approximate size for the url cache based on
+  `:ramper/url-cache-max-byte-size`."
+  []
+  ;; We store 2 longs per url times an estimator of the memory footprint per long
+  (/ (:ramper/url-cache-max-byte-size @runtime-config) (* 16 4)))

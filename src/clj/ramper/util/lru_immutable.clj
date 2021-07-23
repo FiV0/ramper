@@ -8,7 +8,7 @@
   (add [this item]
     (cw/through-cache cache (hash-fn item) (constantly true)))
   (check [this item]
-    (cw/lookup (.cache this) (hash-fn item))))
+    (cw/lookup cache (hash-fn item))))
 
 (defn create-lru-cache
   ([threshold hash-fn] (create-lru-cache {} threshold hash-fn))

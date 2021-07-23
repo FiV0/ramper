@@ -15,7 +15,8 @@
                                       :ramper/user-agent-from
                                       :ramper/ip-delay
                                       :ramper/scheme-authority-delay
-                                      :ramper/workbench-max-byte-size]))
+                                      :ramper/workbench-max-byte-size
+                                      :ramper/url-cache-max-byte-size]))
 
 (defn read-config
   "Read the config from `file` or from a default config."
