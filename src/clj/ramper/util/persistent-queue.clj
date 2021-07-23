@@ -7,7 +7,7 @@
 (defn dequeue!
   "Takes an atom containing a `clojure.lang.PersistentQueue` and pops the first
   value also assuring that the underlying queue has not changed since the pop.
-  Returns the poped element."
+  Returns the popped element."
   [queue-atom]
   (loop []
     (let [q     @queue-atom

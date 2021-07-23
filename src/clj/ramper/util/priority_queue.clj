@@ -51,6 +51,8 @@
            (map first)))))
 
 (defn priority-queue
+  "Creates a new priority queue where the priority is determined by applying
+  `keyfn` on the data added. `keyfn` should return a number."
   ([keyfn] (priority-queue keyfn []))
   ([keyfn data]
    (PriorityQueue. (into (priority-map/priority-map) (map (fn [value] [value (keyfn value)]) data)) keyfn)))
