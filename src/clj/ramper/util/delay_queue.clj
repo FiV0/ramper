@@ -1,39 +1,68 @@
 (ns ramper.util.delay-queue
   "A simple wrapper around `clojure.data.priority-map` to simulate delays.
 
+  Values are enqueued as `[item time]` pairs where `time` is a timestamp in
+  milliseconds. A usage example
+
+  Constructing a delay queue with the function delay-queue
+  user=> (def dq (atom (delay-queue)))
+  #'user/dq
+
+  We can conj an item plus its availability time.
+  user=> (swap! dq conj [:foo (+ (System/currentTimeMillis) 3000)])
+  #object[ramper.util.delay_queue.DelayQueue 0x344ab585 \"clojure.lang.LazySeq@3cd1fc84\"]
+
+  The item won't be immediately available.
+  user=> (peek @dq)
+  nil
+
+  But if we wait a little...
+  user=> (peek @dq)
+  :foo
+
+  The underlying atom has not changed so it's still available via dequeue!. This should
+  also be the standard way of dequeuing items when the queue is accessed concurrently.
+  user=> (dequeue! dq)
+  :foo
+
+  With dequeue! one assures that an item will only be popped once.
+  user=> (dequeue! dq)
+  nil
+
   It's important to not enqueue `nil` values as otherwise the semantics
   of the queue will fail."
-  (:refer-clojure :exclude [peek pop assoc])
   (:require [clojure.data.priority-map :as priority-map]))
 
 ;; TODO maybe look into fitting it into Clojure interfaces
 
-(defrecord DelayQueue [priority-queue]
+(deftype DelayQueue [priority-queue]
   Object
-  (toString [this] (str (.seq this))))
+  (toString [this] (str (.seq this)))
 
-(defn peek
-  "Returns the item with the smallest delay in the queue. `nil`
-  if none is available."
-  [{:keys [priority-queue]  :as _delay-queue}]
-  (when-let [entry (clojure.core/peek priority-queue)]
-    (if (<= (second entry) (System/currentTimeMillis))
-      (first entry)
-      nil)))
+  clojure.lang.IPersistentStack
+  (seq [this]
+    (->> priority-queue seq (map first)))
 
-(defn pop
-  "Returns the delay-queue updated if there was an item to be poped."
-  [{:keys [priority-queue] :as delay-queue}]
-  (if-let [entry (clojure.core/peek priority-queue)]
-    (if (<= (second entry) (System/currentTimeMillis))
-      (update delay-queue :priority-queue clojure.core/pop)
-      delay-queue)
-    delay-queue))
+  (cons [this o]
+    (DelayQueue. (assoc priority-queue (first o) (second o))))
 
-(defn assoc
-  "Assocs the corresponding `item` + `time` onto the delay-queue."
-  [delay-queue item time]
-  (update delay-queue :priority-queue clojure.core/assoc item time))
+  (empty [this] (DelayQueue. (priority-map/priority-map)))
+
+  (equiv [this o]
+    (= priority-queue (.priority-queue o)))
+
+  (peek [this]
+    (when-let [entry (peek priority-queue)]
+      (if (<= (second entry) (System/currentTimeMillis))
+        (first entry)
+        nil)))
+
+  (pop [this]
+    (if-let [entry (peek priority-queue)]
+      (if (<= (second entry) (System/currentTimeMillis))
+        (DelayQueue. (pop priority-queue))
+        this)
+      this)))
 
 (defn dequeue!
   "Takes an atom containing a delay queue and pops (if possible) the first
@@ -55,13 +84,14 @@
      (DelayQueue. (into (priority-map/priority-map) (map #(vector % now) data))))))
 
 (comment
-  (def d 3000)
   (def dq (atom (delay-queue)))
 
-  (swap! dq assoc :foo (+ (System/currentTimeMillis) d))
-  (peek @dq)
+  (swap! dq conj [:foo (+ (System/currentTimeMillis) 3000)]) ; 3 seconds
+  (peek @dq);; => nil
 
   ;; wait a little
-  (peek @dq)
-
-  (dequeue! dq))
+  (peek @dq);; => :foo
+  ;; modifying the underlying atom
+  (dequeue! dq);; => :foo
+  (dequeue! dq);; => nil
+  )
