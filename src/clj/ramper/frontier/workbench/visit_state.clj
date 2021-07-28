@@ -4,7 +4,7 @@
   (:import [java.util.concurrent TimeUnit]))
 
 (def robots-path "/robots.txt")
-(def death-interval (-> TimeUnit/HOURS (.toMillis 1)))
+(def death-interval (.. TimeUnit/HOURS (toMillis 1)))
 
 ;; visit-state documentation
 ;;
@@ -18,13 +18,21 @@
 ;; last-exception - the last exception that occured for this visit state (if any)
 ;; retries - the number of retries with respect to the above exception
 ;; path-queries - the path queries associated with this visit state
+;;
+;; FIXME: this is ugly
+;; visit states might also optionally contain some info of the workbench-entry
+;;
+;; ip-address - the ip-address of the scheme+authority, get assoced when leaving
+;;              an workbench entry.
 
 ;; TODO robots stuff
 ;; TODO think about whether having explicit getters/setters or just assoc data directly.
 ;; tending to the latter.
 
 (defrecord VisitState [scheme+authority next-fetch robots-filter cookies
-                       last-exception retries path-queries])
+                       last-exception retries path-queries]
+  Object
+  (toString [this] (str "[" scheme+authority "(" (count path-queries) ")]")))
 
 (defn visit-state
   ([scheme+authority] (visit-state scheme+authority []))

@@ -1,7 +1,8 @@
 (ns ramper.frontier.workbench
   (:require [ramper.util.priority-queue :as pq]
             [ramper.frontier.workbench.workbench-entry :as we])
-  (:import (ramper.frontier.workbench.workbench_entry WorkbenchEntry)))
+  (:import (ramper.frontier.workbench.visit_state VisitState)
+           (ramper.frontier.workbench.workbench_entry WorkbenchEntry)))
 
 ;; Workbench documentation
 ;;
@@ -47,3 +48,8 @@
   Does not check if valid or not!"
   [^Workbench workbench]
   (update workbench :entries we/remove))
+
+(defn add-visit-state
+  [^Workbench workbench ^VisitState visit-state]
+  ;;TODO
+  )

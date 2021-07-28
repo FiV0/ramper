@@ -37,9 +37,10 @@
   (update workbench-entry :visit-states pop))
 
 (defn first-visit-state
-  "Returns the first visit state in the `workbench-entry`."
-  [^WorkbenchEntry workbench-entry]
-  (-> workbench-entry :visit-states peek))
+  "Returns the first visit state in the `workbench-entry`. Also adds the
+  ip-address of the workbench entry to the returned visit state."
+  [^WorkbenchEntry {:keys [ip-address] :as workbench-entry}]
+  (-> workbench-entry :visit-states peek (assoc :ip-address ip-address)))
 
 (defn size
   "Returns the size of the workbench entry"
