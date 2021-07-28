@@ -29,3 +29,17 @@
             "peek not working")
         (is (= '({:prio 2 :data :bar} {:prio 3 :data :bla}) (-> pq pop seq))
             "pop not working")))))
+
+(deftest priority-queue-map-interface
+  (let [pq (priority-queue/priority-queue :prio [{:prio 1 :data :foo} {:prio 2 :data :bar}])]
+    (testing "assoc and dissoc for priority queue"
+      (is (= '({:prio 1 :data :foo} {:prio 2 :data :bar} {:prio 3 :data :bla})
+             (-> pq
+                 (assoc {:prio 3 :data :bla} 3)
+                 seq))
+          "assoc not working")
+      (is (= '({:prio 1 :data :foo})
+             (seq (dissoc pq {:prio 2 :data :bar})) )
+          "dissoc not working")
+      #_(is (= '({:prio 2 :data :bar} {:prio 3 :data :foo})
+               (update pq {:prio 1 :data :foo} #(update % :prio (fn [prio] (+ prio 2)))))))))

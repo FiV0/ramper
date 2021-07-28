@@ -8,6 +8,14 @@
   Object
   (toString [this] (str (.seq this)))
 
+  ;; Is this a good idea?
+  clojure.lang.IPersistentMap
+  (assoc [this o k]
+    (assert (= k (keyfn o)))
+    (PriorityQueue. (assoc queue o k) keyfn))
+  (without [this o]
+    (PriorityQueue. (dissoc queue o) keyfn))
+
   clojure.lang.IPersistentStack
   (seq [this]
     (->> queue seq (map first)))
