@@ -1,4 +1,4 @@
-(ns ramper.util.threads
+(ns ramper.util.thread
   "Utility functions for working with Java threads."
   (:require [clojure.core.async :as async]))
 
@@ -6,6 +6,11 @@
   "Set the name of the current thread to `name`."
   ([name] (set-thread-name name (Thread/currentThread)))
   ([name thread] (.setName thread name)))
+
+(defn get-threads
+  "Returns a list of threads with the given `name`."
+  [name]
+  (->> (Thread/getAllStackTraces) .keySet (filter #(= name (.getName %)))))
 
 (defrecord ThreadWrapper [thread stop-chan])
 
