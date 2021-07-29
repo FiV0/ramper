@@ -9,16 +9,21 @@
 
 (def addr (InetAddress/getAllByName "www.finnvolkel.com"))
 
-(-> addr first .getHostAddress)
+(defn get-bytes [host]
+  (-> (InetAddress/getAllByName host)
+      first
+      .getAddress))
 
-(def addr (Address/getAllByName "www.finnvolkel.com"))
+(def str-addr (-> addr first .getHostAddress))
 
+(get-bytes str-addr)
 
 (let [cm (conn/make-reusable-conn-manager {})
       hclient (core/build-http-client {} false cm)]
   (client/get "https://finnvolkel.com" {:connection-manager cm :http-client hclient}))
 
-(def loopback (InetAddress/getByAddress (byte-array '(127 0 0 1))))
+;; (def loopback (InetAddress/getByAddress (byte-array '(127 0 0 1))))
+(def loopback (InetAddress/getLoopbackAddress))
 
 ;; COPIED FROM BUbiNG
 

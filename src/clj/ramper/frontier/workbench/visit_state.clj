@@ -4,7 +4,6 @@
   (:import [java.util.concurrent TimeUnit]))
 
 (def robots-path "/robots.txt")
-(def death-interval (.. TimeUnit/HOURS (toMillis 1)))
 
 ;; visit-state documentation
 ;;
@@ -92,11 +91,6 @@
   "Sets the cookies of the `visit-state`."
   [^VisitState visit-state cookies]
   (assoc visit-state :cookies cookies))
-
-(defn set-next-fetch
-  "Sets the next-fetch time of the `visit-state`."
-  [^VisitState visit-state time]
-  (assoc visit-state :next-fetch time))
 
 (nippy/extend-freeze VisitState :visit-state/serialize
   [this os]

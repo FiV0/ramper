@@ -18,7 +18,7 @@
 (defn workbench-entry
   "Initializes a workbench entry with the given `ip-address`."
   [^bytes ip-address]
-  {:pre [(= 4 (.length ip-address))]}
+  {:pre [(= 4 (count ip-address))]}
   (->WorkbenchEntry (pq/priority-queue :next-fetch) ip-address 0 0))
 
 (defn is-broken?
@@ -40,7 +40,7 @@
   "Returns the first visit state in the `workbench-entry`. Also adds the
   ip-address of the workbench entry to the returned visit state."
   [^WorkbenchEntry {:keys [ip-address] :as workbench-entry}]
-  (-> workbench-entry :visit-states peek (assoc :ip-address ip-address)))
+  (some-> workbench-entry :visit-states peek (assoc :ip-address ip-address)))
 
 (defn size
   "Returns the size of the workbench entry"
@@ -56,4 +56,4 @@
   "Returns the minimum time when some url from this `workbench-entry` can
   be accessed."
   [^WorkbenchEntry {:keys [next-fetch] :as workbench-entry}]
-  (max next-fetch (-> workbench-entry first-visit-state :next-fetch)))
+  (max next-fetch (or (-> workbench-entry first-visit-state :next-fetch) 0)))
