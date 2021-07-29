@@ -1,4 +1,4 @@
-(ns ramper.sieve.bucket-test
+(ns ramper.sieve.store-test
   (:require [clojure.test :refer [deftest testing is]]
             [ramper.sieve.store :as store]
             [ramper.util :as util]))
