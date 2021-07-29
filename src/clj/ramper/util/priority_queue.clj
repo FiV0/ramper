@@ -58,6 +58,10 @@
       (->> (if ascending (seq q) (rseq q))
            (map first)))))
 
+(defmethod print-method PriorityQueue [pq ^java.io.Writer w]
+  (.write w "#PriorityQueue")
+  (.write w (pr-str (seq pq))))
+
 (defn priority-queue
   "Creates a new priority queue where the priority is determined by applying
   `keyfn` on the data added. `keyfn` should return a number."
