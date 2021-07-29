@@ -1,7 +1,7 @@
-(ns ramper.util.lru-test
+(ns ramper.util.thread-test
   (:require [clojure.core.async :as async]
             [clojure.test :refer [deftest is testing]]
-            [ramper.util.threads :as threads-util]))
+            [ramper.util.thread :as threads-util]))
 
 (defn- my-thread-fn [put-chan stop-chan]
   (loop [i 0]
