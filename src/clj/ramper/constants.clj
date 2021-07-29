@@ -35,3 +35,7 @@
     java.net.SocketException
     javax.net.ssl.SSLPeerUnverifiedException
     org.apache.http.conn.ConnectTimeoutException})
+
+(def death-interval
+  "An interval after we consider a host dead."
+  (.. TimeUnit/HOURS (toMillis 1)))
