@@ -3,10 +3,11 @@
  :output {:exclude-files []}
  :skip-args []
  :skip-comments true
- :linters {:consistent-alias {:aliases {datomic.api datomic
-                                        io.pedestal.log log
-                                        clojure.core.async async
+ :linters {:consistent-alias {:aliases {clojure.core.async async
+                                        clojure.java.io io
+                                        clojure.spec.alpha s
                                         clojure.string str
-                                        clojure.spec.alpha s}}
+                                        datomic.api datomic
+                                        io.pedestal.log log}}
            :unresolved-symbol {:exclude [(clojure.core.match/match)]}
            :unused-namespace {:exclude [io.pedestal.log]}}}

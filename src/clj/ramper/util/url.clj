@@ -4,7 +4,8 @@
   (:require [clojure.string :as str]
             [lambdaisland.uri :as uri]
             [lambdaisland.uri.normalize :as normalize]
-            [ramper.util :as util])
+            [ramper.util :as util]
+            [ramper.util.byte-serializer :as byte-serializer :refer [ByteSerializer]]            )
   (:import (lambdaisland.uri URI)))
 
 (defn base
@@ -71,6 +72,18 @@
   [url]
   {:pre [(instance? URI url)]}
   (util/hash-str (str url)))
+
+(deftype UrlByteSerializer []
+  ByteSerializer
+  (to-stream [_ os x] (->> x str util/string->bytes (byte-serializer/write-array os)))
+  (from-stream [_ is] (-> (byte-serializer/read-array is) util/bytes->string uri/uri))
+  (skip [_ is] (byte-serializer/skip-array is)))
+
+(defn url-byte-serializer
+  "Returns a serializer implementing `ramper.util.byte-serializer.ByteSerializer`
+  for `lambdaisland.uri.URI`."
+  []
+  (->UrlByteSerializer))
 
 (comment
   (remove-www "https://harbour.space/")
