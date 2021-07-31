@@ -4,10 +4,21 @@
   `runtime-config`. Some options come from ramper.startup-configuration,
   others are sensible defaults. Some can be modified via jmx methods
   at runtime."
-  (:require [ramper.startup-configuration :as sc]))
+  (:require [clojure.java.io :as io]
+            [ramper.startup-configuration :as sc]
+            [ramper.util :as util]))
 
 ;; these are the default values
-(def runtime-config (atom {:ramper/url-cache-max-byte-size (* 1024 1024 1024)}))
+(def runtime-config (atom {:ramper/runtime-stop false
+                           :ramper/runtime-pause false
+                           :ramper/url-cache-max-byte-size (* 1024 1024 1024)
+                           :ramper/root-dir  (util/temp-dir "ramper-root")
+                           :ramper/sieve-size (* 64 1024 1024)
+                           :ramper/store-buffer-size (* 64 1024)
+                           :ramper/aux-buffer-size (* 64 1024)
+                           :ramper/ip-delay 2000 ;2 seconds
+                           :ramper/scheme+authority-delay 2000 ;2 seconds
+                           }))
 
 (defn workbench-size-in-path-queries
   "An estimation of how many path queries should reside in memory."
@@ -25,3 +36,16 @@
   []
   ;; We store 2 longs per url times an estimator of the memory footprint per long
   (/ (:ramper/url-cache-max-byte-size @runtime-config) (* 16 4)))
+
+(defn sieve-dir
+  "Returns the sieve directory based on the current runtime-config."
+  []
+  (let [sieve-dir (io/file (:ramper/root-dir @runtime-config) "sieve")]
+    (when-not (.exists sieve-dir)
+      (.mkdirs sieve-dir))
+    sieve-dir))
+
+(defn runtime-stop?
+  "Returns true when the agent should be stopped."
+  []
+  (:ramper/runtime-stop @runtime-config))

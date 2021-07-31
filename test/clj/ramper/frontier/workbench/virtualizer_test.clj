@@ -9,8 +9,8 @@
 (deftest simple-virtualizer-test
   (testing "virtualizer single-threaded with 2 scheme+authority pairs"
     (let [virtual (virtualizer/workbench-virtualizer (util/temp-dir "virtualizer"))
-          sa1 (-> (url-factory/rand-scheme-authority-seq 1000) distinct)
-          sa2 (->> (url-factory/rand-scheme-authority-seq 1000) (take (count sa1)))
+          sa1 (-> (url-factory/rand-scheme+authority-seq 1000) distinct)
+          sa2 (->> (url-factory/rand-scheme+authority-seq 1000) (take (count sa1)))
           vs1 (vs/visit-state (-> sa1 first url/base str))
           vs2 (vs/visit-state (-> sa2 first url/base str))]
       (loop [sa1 sa1 sa2 sa2]

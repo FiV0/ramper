@@ -30,7 +30,7 @@
                          (map vec)
                          (into {}))) ))
 
-(defn rand-scheme-authority-seq [len]
+(defn rand-scheme+authority-seq [len]
   (let [base (uri/map->URI
               {:scheme (rand-nth '("http" "https"))
                :host (str/join "." (rand-str-seq 3))})]
@@ -38,4 +38,4 @@
 
 (comment
   (rand-url-seq 5)
-  (rand-scheme-authority-seq 5))
+  (rand-scheme+authority-seq 5))

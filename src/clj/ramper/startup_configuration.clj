@@ -8,15 +8,16 @@
                                       :ramper/fetching-threads
                                       :ramper/parsing-threads
                                       :ramper/max-urls
-                                      :ramper/max-urls-per-scheme-authority
+                                      :ramper/max-urls-per-scheme+authority
                                       :ramper/root-dir
                                       :ramper/seed-file
                                       :ramper/user-agent
                                       :ramper/user-agent-from
                                       :ramper/ip-delay
-                                      :ramper/scheme-authority-delay
+                                      :ramper/scheme+authority-delay
                                       :ramper/workbench-max-byte-size
-                                      :ramper/url-cache-max-byte-size]))
+                                      :ramper/url-cache-max-byte-size
+                                      :ramper/sieve-size]))
 
 (defn read-config
   "Read the config from `file` or from a default config."

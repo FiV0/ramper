@@ -2,7 +2,7 @@
  :ramper/fetching-threads 512
  :ramper/parsing-threads 64
  :ramper/max-urls 500M
- :ramper/max-urls-per-scheme-authority 1000
+ :ramper/max-urls-per-scheme+authority 1000
  :ramper/root-dir "ramper-crawl"
  :ramper/seed-file "ramper-config/seed.txt"
  :ramper/user-agent "ramper"
@@ -11,16 +11,15 @@
  ;; :ramper/fetch-data-buffer-byte-size 200K
  ;; :ramper/fetch-filter true
  ;; :ramper/follow-filter true
- ;; :ramper/ip-delay 2s
- ;; :ramper/keep-alive-time 1s
- ;; :ramper/keep-alive-time 1s
+ ;; :ramper/ip-delay 2000
+ ;; :ramper/keep-alive-time 1000
  ;; :ramper/parse-filter nil
  ;; :ramper/parse-spec nil
  ;; :ramper/response-body-max-byte-size 2M
  ;; :ramper/robots-expiration 1h
  ;; :ramper/schedule-filter nil
- ;; :ramper/scheme-authority-delay 10s
- ;; :ramper/sieve-size 64Mi
+ ;; :ramper/scheme+authority-delay 10000
+ ;; :ramper/sieve-size (* 64 1024 1024)
  ;; :ramper/socker-timeout 60s
  ;; :ramper/start-paused false
  ;; :ramper/store-filter nil
