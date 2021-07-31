@@ -7,6 +7,10 @@
   ([name] (set-thread-name name (Thread/currentThread)))
   ([name thread] (.setName thread name)))
 
+(defn set-thread-priority
+  "Sets the `priority` of the current thread."
+  [priority] (.setPriority (Thread/currentThread) priority))
+
 (defn get-threads
   "Returns a list of threads with the given `name`."
   [name]

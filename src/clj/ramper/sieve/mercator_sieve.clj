@@ -150,7 +150,7 @@
   -`sieve-size` - the size of the sieve in longs (before a flush is needed)
   -`store-buffer-size` - the size of the buffer in bytes used during seive flushs to read and
   write hashes (allocated twice during flushes)
-  -`aux-buffer-size` - the size of the buffer to read and write an auxiliary file
+  -`aux-buffer-size` - the size of the buffer in bytes to read and write an auxiliary file
   (always allocated)
   -`receiver` - a receiver implementing the FlowReceiver protocol that receives the
   keys that make it through the seive.

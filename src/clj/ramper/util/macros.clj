@@ -19,24 +19,27 @@
               (do
                 (when-not (= 2 (count first-clause))
                   (throw (IllegalArgumentException.
-                          "cond let expr requires exactly two forms")))
+                          "cond-let binding expr requires exactly two forms")))
                 'if-let)
               'if)
             first-clause
             (if (next clauses)
               (second clauses)
               (throw (IllegalArgumentException.
-                      "cond requires an even number of forms")))
+                      "cond-let requires an even number of forms")))
             (cons 'cond-let (nnext clauses))))))
 
 (comment
   (loop [l (apply list (range 10))]
-    (cond-let (= 5 (count l))
-              (do (println "emptying l")
-                  (recur '()))
-              [e (peek l)]
+    (cond-let [e (peek l)]
               (do (println "got element" e)
                   (recur (pop l)))
+
+
+              (= 5 (count l))
+              (do (println "emptying l")
+                  (recur '()))
+
               :else
               (println "we are done")))
 

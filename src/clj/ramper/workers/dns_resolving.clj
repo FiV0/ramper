@@ -52,15 +52,17 @@
          :else (let [hostname (if (str/ends-with? hostname ".") hostname (str hostname "."))]
                  (Address/getAllByName hostname)))))))
 
-(defn dns-thread [dns-resolver workbench unknown-hosts new-visit-states index stop-chan]
+(defn dns-thread [{:keys [dns-resolver workbench unknown-hosts
+                          new-visit-states] :as _thread-data}
+                  index stop-chan]
   (thread-utils/set-thread-name (str *ns* "-" index))
   (try
     (loop []
-      (if-not (async/<!! stop-chan)
+      (if-not (async/poll! stop-chan)
         ;; maybe add a timeout somewhere as this otherwise might put
         ;; too much pressure on new-visit-states
-        (if-let [{:keys [retries] :as visit-state} (or (delay-queue/dequeue! unknown-hosts)
-                                                       (pq/dequeue! new-visit-states))]
+        (when-let [{:keys [retries] :as visit-state} (or (delay-queue/dequeue! unknown-hosts)
+                                                         (pq/dequeue! new-visit-states))]
           (let [host (-> visit-state :scheme+authority uri/uri :host)]
             (try
               (let [ip-address (-> (.resolve dns-resolver) first .getAddress)]
