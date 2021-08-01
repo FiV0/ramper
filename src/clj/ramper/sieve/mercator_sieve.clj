@@ -20,7 +20,8 @@
       (recur (inc i)))))
 
 (deftype MercatorSieve [receiver serializer hash-function ^:volatile-mutable bucket
-                        ^:volatile-mutable store ^:volatile-mutable closed position]
+                        ^:volatile-mutable store ^:volatile-mutable closed position
+                        ^:volatile-mutable last-flush]
   java.io.Closeable
   (close [sieve]
     (locking sieve
@@ -29,7 +30,7 @@
       (set! closed true)))
 
   Size
-  (number-of-items [this] (number-of-items bucket))
+  (number-of-items [_this] (number-of-items bucket))
 
   Sieve
   (enqueue [sieve key]
@@ -136,7 +137,10 @@
                    (let [duration (max (- (System/nanoTime) start) 1)]
                      (log/info :mercator-flush-completed
                                {:total-time (/ duration 1e9)})
-                     (set! store (store-api/close store)))))))))))
+                     (set! store (store-api/close store))
+                     (set! last-flush (System/currentTimeMillis))))))))))
+
+  (last-flush [_this] last-flush))
 
 ;; TODO: think about if there should be the possibility of transforming keys before hashing
 ;; as otherwise stuff might be done multiple times for serialization and hashing
@@ -165,4 +169,5 @@
                    (bucket-api/bucket serializer sieve-size aux-buffer-size sieve-dir)
                    (store-api/store new sieve-dir "store" store-buffer-size)
                    false
-                   (make-array Integer/TYPE sieve-size)))
+                   (make-array Integer/TYPE sieve-size)
+                   0))

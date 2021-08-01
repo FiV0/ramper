@@ -50,7 +50,10 @@
       (let [dequeued (reduce (fn [res _] (conj res (receiver/dequeue-key r)))
                              #{}
                              (range (count @enqueued)))]
-        (is (= @enqueued dequeued) "enqueued and dequeued sets must be equal")))))
+        (is (= @enqueued dequeued) "enqueued and dequeued sets must be equal"))
+      (let [last-flush (sieve/last-flush s)]
+        (is (not= 0 last-flush) "last-flush is 0")
+        (is (>= (System/currentTimeMillis) last-flush) "last-flush not less than now")))))
 
 (deftest mercator-sieve-multi-threaded-parallel-dequeue
   (testing "mercator sieve multithreaed enqueueing, parallel dequeueing"
@@ -77,4 +80,7 @@
       (run! deref enqueue-threads)
       (sieve/flush s)
       (run! deref dequeue-threads)
-      (is (= @enqueued @dequeued) "enqueued and dequeued sets must be equal"))))
+      (is (= @enqueued @dequeued) "enqueued and dequeued sets must be equal")
+      (let [last-flush (sieve/last-flush s)]
+        (is (not= 0 last-flush) "last-flush is 0")
+        (is (>= (System/currentTimeMillis) last-flush) "last-flush not less than now")))))

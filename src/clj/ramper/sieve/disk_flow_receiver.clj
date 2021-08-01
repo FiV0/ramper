@@ -1,7 +1,7 @@
 (ns ramper.sieve.disk-flow-receiver
   (:refer-clojure :exclude [flush])
   (:require [clojure.java.io :as io]
-            [ramper.sieve :refer [FlowReceiver prepare-to-append append finish-appending no-more-append]]
+            [ramper.sieve :refer [FlowReceiver]]
             [ramper.util.byte-serializer :refer [from-stream to-stream]])
   (:import (java.io DataInputStream DataOutputStream File FileInputStream FileOutputStream)
            (java.util NoSuchElementException)
