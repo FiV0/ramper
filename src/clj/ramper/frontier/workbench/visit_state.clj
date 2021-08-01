@@ -1,7 +1,6 @@
 (ns ramper.frontier.workbench.visit-state
   (:require [ramper.util.byte-serializer :as byte-serializer]
-            [taoensso.nippy :as nippy])
-  (:import [java.util.concurrent TimeUnit]))
+            [taoensso.nippy :as nippy]))
 
 (def robots-path "/robots.txt")
 
@@ -31,7 +30,7 @@
 (defrecord VisitState [scheme+authority next-fetch robots-filter cookies
                        last-exception retries path-queries]
   Object
-  (toString [this] (str "[" scheme+authority "(" (count path-queries) ")]")))
+  (toString [_this] (str "[" scheme+authority "(" (count path-queries) ")]")))
 
 (defn visit-state
   ([scheme+authority] (visit-state scheme+authority []))

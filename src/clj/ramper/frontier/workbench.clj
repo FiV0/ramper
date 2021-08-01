@@ -1,6 +1,8 @@
 (ns ramper.frontier.workbench
-  (:require [ramper.util.priority-queue :as pq]
-            [ramper.frontier.workbench.workbench-entry :as we])
+  (:require [clojure.math.numeric-tower :as math]
+            [ramper.frontier.workbench.workbench-entry :as we]
+            [ramper.runtime-configuration :as runtime-config]
+            [ramper.util.priority-queue :as pq])
   (:import (java.util Arrays)
            (ramper.frontier.workbench.visit_state VisitState)
            (ramper.frontier.workbench.workbench_entry WorkbenchEntry)))
@@ -13,9 +15,13 @@
 ;;
 ;; It's important that the workbench entries and in address-to-entry and entries are
 ;; in sync, as otherwise the logic fails.
-;; We also currently assume that a WorkbenchEntry in
+;; The idea is also that all the logic of active visit-states, empty workbench
+;; entries, etc... goes *through* the workbench. That doesn't mean you can't
+;; compute anything on a workbench entry or a visit state, just make sure that
+;; something gets updated, it's reflected in the workbench.
 
-(defrecord Workbench [address-to-entry entries broken])
+;; TODO: Write good specs to enforce semantics of the workbench.
+(defrecord Workbench [address-to-entry address-to-busy-entry entries broken])
 
 ;; TODO: check why Arrays/hashCode alone might not be good enough
 ;; add murmurhash3 on top?
@@ -25,7 +31,7 @@
 (defn workbench
   "Creates a new workbench."
   []
-  (->Workbench {} (pq/priority-queue we/next-fetch) 0))
+  (->Workbench {} {} (pq/priority-queue we/next-fetch) 0))
 
 (defn get-workbench-entry
   "Returns a workbench entry for an `ip-address`."
@@ -36,7 +42,7 @@
 (defn get-workbench-entry-for-visit-state
   "Returns the workbench entry for a given `visit-state`."
   [^Workbench workbench ^VisitState {:keys [ip-address] :as visit_state}]
-  {:pre [(contains? :ip-address visit_state)]}
+  {:pre [(contains? visit_state :ip-address)]}
   (get-workbench-entry workbench ip-address))
 
 (defn nb-workbench-entries
@@ -55,7 +61,7 @@
   "Returns the next visit state that is available in the `workbench`, nil
   if there is none available."
   [^Workbench {:keys [entries] :as _workbench}]
-  (if (<= (-> entries peek we/next-fetch) (System/currentTimeMillis) )
+  (if (<= (-> entries peek we/next-fetch) (System/currentTimeMillis))
     (-> entries peek we/first-visit-state)
     nil))
 
@@ -103,3 +109,19 @@
       (cond (nil? value) nil
             (and value (compare-and-set! workbench-atom wb new-wb)) value
             :else (recur)))))
+
+;; Copied from BUbing
+(defn path-query-limit
+  "Calculates the number of path-queries the given `visit-state` should keep in memory."
+  [^Workbench {:keys [address-to-entry address-to-busy-entry] :as _workbench}
+   ^VisitState {:keys [ip-address] :as visit-state}
+   {:ramper/keys [ip-delay scheme+authority-delay] :as _runtime-config}
+   required-front-size]
+  {:pre [(contains? visit-state :ip-address)
+         (contains? (merge address-to-entry address-to-busy-entry) (hash-ip ip-address))]}
+  (let [workbench-entry (get (merge address-to-entry address-to-busy-entry) (hash-ip ip-address))
+        delay-ratio (max 1.0 (/ (+ scheme+authority-delay 1.0)
+                                (+ ip-delay 1.0)))
+        scaling-factor (if (nil? workbench-entry) 1.0 (/ (we/size workbench-entry) delay-ratio))]
+    (min (/ 300000 scheme+authority-delay)
+         (max 4 (math/ceil (/ (runtime-config/workbench-size-in-path-queries) (* scaling-factor required-front-size)))))))

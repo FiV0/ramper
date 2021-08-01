@@ -26,10 +26,11 @@
 ;; directory - the directory where the log files reside
 
 ;; TODO add Metadata saving on close for restart
+;; TODO unify this with ramper.util.DataDiskQueues
 
 (defrecord WorkbenchVirtualizer [disk-queues directory]
   Closeable
-  (close [this]
+  (close [_this]
     (.close disk-queues)))
 
 (defn workbench-virtualizer
