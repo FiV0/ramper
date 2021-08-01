@@ -43,3 +43,7 @@
 (def purge-delay
   "The delay since the last fetch when visit-states should be purged."
   (.. TimeUnit/DAYS (toMillis 1)))
+
+(def min-flush-interval
+  "The minimum time in milliseconds between two flushes."
+  (.. TimeUnit/SECONDS (toMillis 10)))
