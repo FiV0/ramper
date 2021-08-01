@@ -1,8 +1,12 @@
 (ns ramper.frontier
   "The frontier contains a certain number datastructures shared across different
   threads of an agent."
-  (:require [ramper.frontier.workbench :as workbench]
+  (:require [clojure.java.io :as io]
+            [ramper.frontier.workbench :as workbench]
             [ramper.runtime-configuration :as runtime-config]
+            [ramper.sieve.disk-flow-receiver :as receiver]
+            [ramper.sieve.mercator-sieve :as mercator-sieve]
+            [ramper.util.data-disk-queues :as ddq]
             [ramper.util.delay-queue :as delay-queue]
             [ramper.util.lru-immutable :as lru]
             [ramper.util.url :as url]))
@@ -51,6 +55,56 @@
   dns resolving threads."
   (atom clojure.lang.PersistentQueue/EMPTY))
 
+(defn- url-flow-receiver-init []
+  (receiver/disk-flow-receiver (url/url-byte-serializer)))
+
+;; TODO: Does this need to be in atom. Can the receiver not implement a reset.
+;; TODO: Move dequeue protocol to better place.
+(def url-flow-receiver
+  "A url receiver that should implement `ramper.sieve.FlowReceiver`
+  as well as (for now) `ramper.sieve.disk-flow-receiver.DiskFlowReceiverDequeue`"
+  (atom (url-flow-receiver-init)))
+
+(defn- sieve-init []
+  (mercator-sieve/mercator-seive
+   true
+   (runtime-config/sieve-dir)
+   (:ramper/sieve-size @runtime-config/runtime-config)
+   (:ramper/store-buffer-size @runtime-config/runtime-config)
+   (:ramper/aux-buffer-size @runtime-config/runtime-config)
+   @url-flow-receiver
+   (url/url-byte-serializer)
+   url/hash-url))
+
+(def sieve
+  "An url sieve implementing `ramper.sieve.Sieve`."
+  (atom (sieve-init)))
+
+(defn- data-disk-queues-init [name]
+  (ddq/data-disk-queues (io/file (:ramper/frontier-dir @runtime-config/runtime-config) name)))
+
+(def ready-urls
+  "A (probably disk-based) queue to store urls coming out of the sieve."
+  (atom (data-disk-queues-init "ready")))
+
+;; not used for now
+(def received-urls
+  "A (probably disk-based) queue to store urls coming from different agents."
+  (atom (data-disk-queues-init "received")))
+
+;; TODO: Do we really need this? Maybe otherwise to much load on memory.
+;; Should we just an approximate amount of path+queries that should reside in
+;; memory? See runtime-config/workbench-size-in-path-queries.
+(def weight-of-path-queries
+  "The weight of all the path+queris stored in visit-state queues."
+  (atom 0))
+
+(def required-front-size
+  "Current estimation of the size of the front in ip addresses. Adaptively
+  increased by the fetching threads whenever they have to wait to retrieve
+  a visit state from the todo queue."
+  (atom 0))
+
 (defn intiailze-frontier
   "Initializes the frontiers datastructures."
   []
@@ -64,4 +118,15 @@
                                        (runtime-config/approximate-url-cache-threshold)
                                        url/hash-url)))
   (reset! unknown-hosts (delay-queue/delay-queue))
-  (reset! new-visit-states clojure.lang.PersistentQueue/EMPTY))
+  (reset! new-visit-states clojure.lang.PersistentQueue/EMPTY)
+  (reset! url-flow-receiver (url-flow-receiver-init))
+  (reset! sieve (sieve-init))
+  (reset! ready-urls (data-disk-queues-init "ready"))
+  (reset! received-urls (data-disk-queues-init "received"))
+  (reset! weight-of-path-queries 0)
+  (reset! required-front-size 0))
+
+(defn workbench-full?
+  "Returns true if the workbench is considered full."
+  []
+  (<= (:ramper/workbench-max-byte-size @runtime-config/runtime-config) @weight-of-path-queries))

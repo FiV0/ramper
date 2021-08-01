@@ -8,16 +8,19 @@
             [ramper.startup-configuration :as sc]
             [ramper.util :as util]))
 
+(def ^:private root-dir (util/temp-dir "ramper-root"))
+
 ;; these are the default values
 (def runtime-config (atom {:ramper/runtime-stop false
                            :ramper/runtime-pause false
                            :ramper/url-cache-max-byte-size (* 1024 1024 1024)
-                           :ramper/root-dir  (util/temp-dir "ramper-root")
+                           :ramper/root-dir root-dir
                            :ramper/sieve-size (* 64 1024 1024)
                            :ramper/store-buffer-size (* 64 1024)
                            :ramper/aux-buffer-size (* 64 1024)
                            :ramper/ip-delay 2000 ;2 seconds
                            :ramper/scheme+authority-delay 2000 ;2 seconds
+                           :ramper/frontier-dir (io/file root-dir "frontier")
                            }))
 
 (defn workbench-size-in-path-queries

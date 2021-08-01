@@ -1,7 +1,7 @@
 (ns ramper.util.data-disk-queues
   "A Clojure interface for `ramper.util.ByteArrayDiskQueues` for arbitrary data.
 
-   "
+   TODO: explanation"
   (:refer-clojure :exclude [count remove])
   (:require [io.pedestal.log :as log]
             [taoensso.nippy :as nippy])
