@@ -60,9 +60,11 @@
 
 ;; TODO: Does this need to be in atom. Can the receiver not implement a reset.
 ;; TODO: Move dequeue protocol to better place.
-(def url-flow-receiver
-  "A url receiver that should implement `ramper.sieve.FlowReceiver`
-  as well as (for now) `ramper.sieve.disk-flow-receiver.DiskFlowReceiverDequeue`"
+(def ready-urls
+  " A (probably disk-based) queue to store urls coming out of the sieve.
+
+  Should implement `ramper.sieve.FlowReceiver` as well as (for now)
+  `ramper.sieve.disk-flow-receiver.DiskFlowReceiverDequeue`"
   (atom (url-flow-receiver-init)))
 
 (defn- sieve-init []
@@ -72,7 +74,7 @@
    (:ramper/sieve-size @runtime-config/runtime-config)
    (:ramper/store-buffer-size @runtime-config/runtime-config)
    (:ramper/aux-buffer-size @runtime-config/runtime-config)
-   @url-flow-receiver
+   @ready-urls
    (url/url-byte-serializer)
    url/hash-url))
 
@@ -82,10 +84,6 @@
 
 (defn- data-disk-queues-init [name]
   (ddq/data-disk-queues (io/file (:ramper/frontier-dir @runtime-config/runtime-config) name)))
-
-(def ready-urls
-  "A (probably disk-based) queue to store urls coming out of the sieve."
-  (atom (data-disk-queues-init "ready")))
 
 ;; not used for now
 (def received-urls
@@ -119,9 +117,8 @@
                                        url/hash-url)))
   (reset! unknown-hosts (delay-queue/delay-queue))
   (reset! new-visit-states clojure.lang.PersistentQueue/EMPTY)
-  (reset! url-flow-receiver (url-flow-receiver-init))
+  (reset! ready-urls (url-flow-receiver-init))
   (reset! sieve (sieve-init))
-  (reset! ready-urls (data-disk-queues-init "ready"))
   (reset! received-urls (data-disk-queues-init "received"))
   (reset! weight-of-path-queries 0)
   (reset! required-front-size 0))
