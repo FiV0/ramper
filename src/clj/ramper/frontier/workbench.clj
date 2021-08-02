@@ -4,12 +4,15 @@
             [ramper.runtime-configuration :as runtime-config]
             [ramper.util.priority-queue :as pq])
   (:import (java.util Arrays)
+           (lambdaisland.uri URI)
            (ramper.frontier.workbench.visit_state VisitState)
            (ramper.frontier.workbench.workbench_entry WorkbenchEntry)))
 
 ;; Workbench documentation
 ;;
 ;; address-to-entry - a map from ip address to workbench-entries (in the workbench)
+;; address-to-busy-entries - a map from ip address to workbench entries that are currently busy
+;; scheme+authorities - a set of scheme+authorities that have a corresponding visit-state
 ;; entries - a priority queue based on the next-fetch time of the entries
 ;; broken - number of broken workbench entries
 ;;
@@ -21,7 +24,11 @@
 ;; something gets updated, it's reflected in the workbench.
 
 ;; TODO: Write good specs to enforce semantics of the workbench.
-(defrecord Workbench [address-to-entry address-to-busy-entry entries broken])
+;; TODO: Think about a way to add to path+queries to the Workbench/Visit-state
+;;       even if the visit-state is currently in the Workbench, without it
+;;       being to computationally heavy.
+(defrecord Workbench [address-to-entry address-to-busy-entry
+                      scheme+authorities entries broken])
 
 ;; TODO: check why Arrays/hashCode alone might not be good enough
 ;; add murmurhash3 on top?
@@ -31,7 +38,7 @@
 (defn workbench
   "Creates a new workbench."
   []
-  (->Workbench {} {} (pq/priority-queue we/next-fetch) 0))
+  (->Workbench {} {} #{} (pq/priority-queue we/next-fetch) 0))
 
 (defn get-workbench-entry
   "Returns a workbench entry for an `ip-address`."
@@ -97,6 +104,16 @@
   (let [old-wb-entry (get-workbench-entry workbench ip-address)
         new-wb-entry (we/add old-wb-entry visit-state)]
     (update-workbench workbench old-wb-entry new-wb-entry)))
+
+(defn scheme+authority-present?
+  "TODO"
+  [^Workbench workbench ^URI scheme+authority]
+  :todo)
+
+(defn enable-ip
+  "TODO"
+  [^Workbench workbench ^bytes ip-address]
+  :todo)
 
 (defn dequeue-visit-state!
   "Takes a workbench atom and dequeues the first available visit-state

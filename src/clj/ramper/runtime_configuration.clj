@@ -21,7 +21,7 @@
                            :ramper/ip-delay 2000 ;2 seconds
                            :ramper/scheme+authority-delay 2000 ;2 seconds
                            :ramper/frontier-dir (io/file root-dir "frontier")
-                           }))
+                           :ramper/max-urls-per-scheme+authority 500}))
 
 (defn workbench-size-in-path-queries
   "An estimation of how many path queries should reside in memory."
