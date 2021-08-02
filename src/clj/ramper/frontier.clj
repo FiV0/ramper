@@ -3,6 +3,7 @@
   threads of an agent."
   (:require [clojure.java.io :as io]
             [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench.virtualizer :as virtualizer]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.sieve.disk-flow-receiver :as receiver]
             [ramper.sieve.mercator-sieve :as mercator-sieve]
@@ -10,6 +11,9 @@
             [ramper.util.delay-queue :as delay-queue]
             [ramper.util.lru-immutable :as lru]
             [ramper.util.url :as url]))
+
+(defn- frontier-subdir [name]
+  (io/file (:ramper/frontier-dir @runtime-config/runtime-config) name))
 
 (def refill-queue
   "A queue containing visit states that can be refilled. Filled in the \"done\"
@@ -39,6 +43,13 @@
   \"done\" thread. The \"todo\" thread dequeues from it. See also
   ramper.frontier.workbench."
   (atom (workbench/workbench)))
+
+(defn workbench-virtualizer-init []
+  (virtualizer/workbench-virtualizer (frontier-subdir "virtualizer")))
+
+(def workbench-virtualizer
+  "The virtualizer for the workbench."
+  (atom (workbench-virtualizer-init)))
 
 (def url-cache
   "An url cache for the urls seen recently. This avoids overloading the sieve and
@@ -103,6 +114,12 @@
   a visit state from the todo queue."
   (atom 0))
 
+(def scheme+authority-to-count
+  "A map from scheme+authority to number of urls crawled (or to be crawled) so far.
+
+  Mainly used in the context `:ramper/max-urls-per-scheme+authority`"
+  (atom {}))
+
 (defn intiailze-frontier
   "Initializes the frontiers datastructures."
   []
@@ -111,6 +128,7 @@
   (reset! todo-queue clojure.lang.PersistentQueue/EMPTY)
   (reset! results-queue clojure.lang.PersistentQueue/EMPTY)
   (reset! workbench (workbench/workbench))
+  (reset! workbench-virtualizer (workbench-virtualizer-init))
   ;; TODO find a more elegent way
   (alter-var-root #'url-cache (fn [_] (lru/create-lru-cache
                                        (runtime-config/approximate-url-cache-threshold)
@@ -121,7 +139,8 @@
   (reset! sieve (sieve-init))
   (reset! received-urls (data-disk-queues-init "received"))
   (reset! weight-of-path-queries 0)
-  (reset! required-front-size 0))
+  (reset! required-front-size 0)
+  (reset! scheme+authority-to-count {}))
 
 (defn workbench-full?
   "Returns true if the workbench is considered full."
