@@ -41,5 +41,7 @@
       (is (= '({:prio 1 :data :foo})
              (seq (dissoc pq {:prio 2 :data :bar})) )
           "dissoc not working")
+      (is (= '({:prio 1 :data :foo} {:prio 2 :data :bar})
+             (seq (dissoc pq {:some-random :map})) ))
       #_(is (= '({:prio 2 :data :bar} {:prio 3 :data :foo})
                (update pq {:prio 1 :data :foo} #(update % :prio (fn [prio] (+ prio 2)))))))))
