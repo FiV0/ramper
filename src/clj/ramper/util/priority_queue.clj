@@ -16,7 +16,8 @@
 
   clojure.lang.IPersistentStack
   (seq [_this]
-    (->> queue seq (map first)))
+    (when (seq queue)
+      (->> queue seq (map first))))
 
   (cons [_this o]
     (PriorityQueue. (assoc queue o (keyfn o)) keyfn))
@@ -39,7 +40,8 @@
 
   clojure.lang.Reversible
   (rseq [_this]
-    (->> queue rseq (map first)))
+    (when (seq queue)
+      (->> queue rseq (map first))))
 
   clojure.lang.Sorted
   (comparator [this] (.comparator (.queue this)))

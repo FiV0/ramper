@@ -28,7 +28,11 @@
         (is (= {:prio 1 :data :foo} (peek pq))
             "peek not working")
         (is (= '({:prio 2 :data :bar} {:prio 3 :data :bla}) (-> pq pop seq))
-            "pop not working")))))
+            "pop not working")
+        (is (nil? (seq (priority-queue/priority-queue :foo)))
+            "seq not working correctly for empty priority-queue")
+        (is (nil? (rseq (priority-queue/priority-queue :foo)))
+            "rseq not working correctly for empty priority-queue")))))
 
 (deftest priority-queue-map-interface
   (let [pq (priority-queue/priority-queue :prio [{:prio 1 :data :foo} {:prio 2 :data :bar}])]
