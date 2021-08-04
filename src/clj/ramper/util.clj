@@ -120,3 +120,10 @@
   "Returns a 128 bit MurmurHash3 of `str`yielding a vector of two longs."
   [s]
   (vec (MurmurHash3/hash128 s)))
+
+(defn ip-address->str
+  "Returns an ip byte array as string."
+  [ip-address]
+  {:pre [(= 4 (count ip-address))]}
+  (->> (map int ip-address)
+       (str/join ".")))
