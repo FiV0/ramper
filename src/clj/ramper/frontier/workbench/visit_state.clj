@@ -22,6 +22,8 @@
 ;;
 ;; ip-address - the ip-address of the scheme+authority, get assoced when leaving
 ;;              an workbench entry.
+;; locked-entry - the visit-state is currently not in the workbench and indicates that
+;;                a workbench entry is currently locked because of it.
 
 ;; TODO robots stuff
 ;; TODO think about whether having explicit getters/setters or just assoc data directly.

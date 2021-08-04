@@ -101,6 +101,10 @@
   "A (probably disk-based) queue to store urls coming from different agents."
   (atom (data-disk-queues-init "received")))
 
+(def path-queries-in-queues
+  "The overall number of path queries stored in visit-state queues."
+  (atom 0))
+
 ;; TODO: Do we really need this? Maybe otherwise to much load on memory.
 ;; Should we just an approximate amount of path+queries that should reside in
 ;; memory? See runtime-config/workbench-size-in-path-queries.
@@ -138,6 +142,7 @@
   (reset! ready-urls (url-flow-receiver-init))
   (reset! sieve (sieve-init))
   (reset! received-urls (data-disk-queues-init "received"))
+  (reset! path-queries-in-queues 0)
   (reset! weight-of-path-queries 0)
   (reset! required-front-size 0)
   (reset! scheme+authority-to-count {}))
@@ -145,4 +150,5 @@
 (defn workbench-full?
   "Returns true if the workbench is considered full."
   []
-  (<= (:ramper/workbench-max-byte-size @runtime-config/runtime-config) @weight-of-path-queries))
+  #_(<= (:ramper/workbench-max-byte-size @runtime-config/runtime-config) @weight-of-path-queries)
+  (<= (runtime-config/workbench-size-in-path-queries) @path-queries-in-queues))

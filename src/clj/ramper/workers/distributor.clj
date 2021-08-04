@@ -49,6 +49,7 @@
                   (locking @sieve)
                   (cond-let [visit-state (queue-utils/dequeue! refill-queue)]
                             (if (= 0 (virtual/count virtualizer visit-state))
+                              ;; TODO check if we need a purge-visit-state
                               (log/info :distributor/no-urls {:visit-state (dissoc visit-state :path-queries)})
                               (let [path-query-limit (workbench/path-query-limit
                                                       @workbench visit-state @runtime-config @required-front-size)
