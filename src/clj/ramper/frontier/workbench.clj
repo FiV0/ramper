@@ -31,6 +31,8 @@
 ;; TODO: Think about a way to add to path+queries to the Workbench/Visit-state
 ;;       even if the visit-state is currently in the Workbench, without it
 ;;       being too computationally heavy.
+;; TODO: the :locked-entry approach as well as keeping up with statitics of items
+;;       is extremely fragile
 (defrecord Workbench [address-to-entry address-to-busy-entry
                       scheme+authorities entries broken path-queries-count])
 
@@ -44,7 +46,7 @@
   []
   (->Workbench {} {} #{} (pq/priority-queue we/next-fetch) 0 0))
 
-(defn- get-workbench-entry
+(defn get-workbench-entry
   "Returns a workbench entry for an `ip-address`."
   [^Workbench {:keys [address-to-entry address-to-busy-entry] :as _workbench} ^bytes ip-address]
   {:pre [(= 4 (count ip-address))]}
@@ -80,7 +82,7 @@
   "Returns the next visit state that is available in the `workbench`, nil
   if there is none available."
   [^Workbench {:keys [entries] :as _workbench}]
-  (if (<= (-> entries peek we/next-fetch) (System/currentTimeMillis))
+  (if (and (seq entries) (<= (-> entries peek we/next-fetch) (System/currentTimeMillis)))
     (-> entries peek we/first-visit-state)
     nil))
 
@@ -138,12 +140,13 @@
 (defn add-visit-state
   "Adds a new `visit-state` to `workbench`, creating a new workbench-entry if necessary."
   [^Workbench {:keys [address-to-entry address-to-busy-entry] :as workbench}
-   ^VisitState {:keys [ip-address locked-entry] :as visit-state}]
+   ^VisitState {:keys [ip-address locked-entry scheme+authority] :as visit-state}]
   {:pre [(contains? visit-state :ip-address)]}
   (let [ip-hash (hash-ip ip-address)
         {:keys [busy] :as old-wb-entry} (get-workbench-entry workbench ip-address)
         old-wb-entry (dissoc old-wb-entry :busy)
-        new-wb-entry (we/add old-wb-entry visit-state)]
+        new-wb-entry (we/add old-wb-entry (dissoc visit-state :locked-entry))
+        workbench (update workbench :scheme+authorities conj scheme+authority)]
     (when locked-entry
       (assert (contains? address-to-busy-entry ip-hash))
       (assert (not (contains? address-to-entry ip-hash))))
@@ -168,7 +171,7 @@
   [^Workbench {:keys [address-to-busy-entry] :as workbench}
    ^VisitState {:keys [ip-address scheme+authority] :as _visit-state}]
   (let [ip-hash (hash-ip ip-address)
-        new-workbench (update workbench :scheme+authorities dissoc scheme+authority)]
+        new-workbench (update workbench :scheme+authorities disj scheme+authority)]
     (if-let [new-wb-entry (get address-to-busy-entry ip-hash)]
       (-> new-workbench
           (update :address-to-busy-entry dissoc ip-hash)
@@ -187,7 +190,6 @@
       (cond (nil? value)
             nil
             (and value (compare-and-set! workbench-atom wb new-wb))
-            ;; TODO find a cleaner approach
             (assoc value :locked-entry true)
             :else (recur)))))
 
