@@ -5,6 +5,7 @@
             [io.pedestal.log :as log]
             [ramper.constants :as constants]
             [ramper.frontier.workbench :as workbench]
+            [ramper.util :as util]
             [ramper.util.thread :as thread-utils]
             [ramper.util.delay-queue :as delay-queue]
             [ramper.util.persistent-queue :as pq])
@@ -58,14 +59,14 @@
   (thread-utils/set-thread-name (str *ns* "-" index))
   (try
     (loop []
-      (if-not (async/poll! stop-chan)
+      (when-not (async/poll! stop-chan)
         ;; maybe add a timeout somewhere as this otherwise might put
         ;; too much pressure on new-visit-states
         (when-let [{:keys [retries] :as visit-state} (or (delay-queue/dequeue! unknown-hosts)
                                                          (pq/dequeue! new-visit-states))]
           (let [host (-> visit-state :scheme+authority uri/uri :host)]
             (try
-              (let [ip-address (-> (.resolve dns-resolver) first .getAddress)]
+              (let [ip-address (-> (.resolve dns-resolver host) first .getAddress)]
                 (swap! workbench workbench/add-visit-state (-> visit-state
                                                                (assoc :ip-address ip-address)
                                                                (assoc :last-exception nil))))
@@ -81,12 +82,12 @@
                           (assoc :last-exception UnknownHostException))]
                   (when (< retries (get constants/exception-to-max-retries UnknownHostException))
                     (let [delay (bit-shift-left (get constants/exception-to-wait-time UnknownHostException) retries)
-                          visit-state (assoc visit-state :next-fetch (+ (System/currentTimeMillis) delay))]
+                          next-fetch (util/from-now delay)
+                          visit-state (assoc visit-state :next-fetch next-fetch)]
                       (log/info :retry-dns-resolution {:delay delay :visit-state visit-state})
-                      (swap! unknown-hosts conj [visit-state delay])))
+                      (swap! unknown-hosts conj [visit-state next-fetch])))
                   ;; o/w the visit-state gets purged by garbage collection
-                  )))
-            (recur))
+                  ))))
           (recur))))
     (catch Throwable t
       (log/error :unexpected-ex (Throwable->map t))))
