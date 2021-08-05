@@ -32,7 +32,7 @@
 
   ;; cache implementation
   commons-codec/commons-codec {:mvn/version "1.15"}
-  ramper.util/dll             {:local/root "/home/fv/Code/Java/dll/target/dll-1.0-SNAPSHOT.jar"}
+  ramper.util/dll             {:local/root "jars/dll-1.0-SNAPSHOT.jar"}
 
   }
 
