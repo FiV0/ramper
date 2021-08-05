@@ -127,3 +127,8 @@
   {:pre [(= 4 (count ip-address))]}
   (->> (map int ip-address)
        (str/join ".")))
+
+(defn from-now
+  "Returns a timestamp `millis` milliseconds from the invocation."
+  [millis]
+  (+ (System/currentTimeMillis) millis))

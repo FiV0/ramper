@@ -1,9 +1,8 @@
 (ns ramper.frontier.workbench-test
-  (:require [clojure.core.async :as async]
-            [clojure.test :refer [deftest is testing]]
+  (:require [clojure.test :refer [deftest is testing]]
             [ramper.frontier.workbench :as workbench]
-            [ramper.frontier.workbench.workbench-entry :as we]
             [ramper.frontier.workbench.visit-state :as visit-state]
+            [ramper.util :as util]
             [ramper.util.url :as url])
   (:import (java.net InetAddress)))
 
@@ -11,9 +10,6 @@
   (-> (InetAddress/getAllByName host)
       first
       .getAddress))
-
-(defn from-now [millis]
-  (+ (System/currentTimeMillis) millis))
 
 (def ip-addrs (map get-bytes ["127.0.0.1" "127.0.0.2" "127.0.0.3"]))
 
@@ -26,22 +22,22 @@
   (testing "workbench testing"
     (let [vs1 (-> (visit-state/visit-state (url/scheme+authority "http://foo.bar"))
                   (assoc :ip-address (first ip-addrs))
-                  (assoc :next-fetch (from-now 300))
+                  (assoc :next-fetch (util/from-now 300))
                   (visit-state/enqueue-path-query "/path1")
                   (visit-state/enqueue-path-query "/path2"))
           vs2 (-> (visit-state/visit-state (url/scheme+authority "http://foo.bla"))
                   (assoc :ip-address (second ip-addrs))
-                  (assoc :next-fetch (from-now 200))
+                  (assoc :next-fetch (util/from-now 200))
                   (visit-state/enqueue-path-query "/path1")
                   (visit-state/enqueue-path-query "/path2"))
           vs3 (-> (visit-state/visit-state (url/scheme+authority "http://foo.toto"))
                   (assoc :ip-address (first (nnext ip-addrs)))
-                  (assoc :next-fetch (from-now 400))
+                  (assoc :next-fetch (util/from-now 400))
                   (visit-state/enqueue-path-query "/path1")
                   (visit-state/enqueue-path-query "/path2"))
           vs4 (-> (visit-state/visit-state (url/scheme+authority "http://foo.cofefe"))
                   (assoc :ip-address (second ip-addrs))
-                  (assoc :next-fetch (from-now 500))
+                  (assoc :next-fetch (util/from-now 500))
                   (visit-state/enqueue-path-query "/path1")
                   (visit-state/enqueue-path-query "/path2"))
           wb (reduce workbench/add-visit-state (workbench/workbench) [vs1 vs2 vs3 vs4])]
@@ -71,7 +67,7 @@
       (Thread/sleep 100)
       (let [vs2 (-> (workbench/peek-visit-state wb)
                     (assoc :locked-entry true)
-                    (assoc :next-fetch (from-now 200)))
+                    (assoc :next-fetch (util/from-now 200)))
             wb (-> wb
                    workbench/pop-visit-state
                    (workbench/add-visit-state vs2))]
@@ -87,7 +83,7 @@
       ;; same as the let above but with purge
       (let [vs2 (-> (workbench/peek-visit-state wb)
                     (assoc :locked-entry true)
-                    (assoc :next-fetch (from-now 200)))
+                    (assoc :next-fetch (util/from-now 200)))
             wb (-> wb
                    workbench/pop-visit-state
                    (workbench/purge-visit-state vs2))]
@@ -107,22 +103,22 @@
     (let [wb (atom (workbench/workbench))
           vs1 (-> (visit-state/visit-state (url/scheme+authority "http://foo.bar"))
                   (assoc :ip-address (first ip-addrs))
-                  (assoc :next-fetch (from-now 300))
+                  (assoc :next-fetch (util/from-now 300))
                   (visit-state/enqueue-path-query "/path1")
                   (visit-state/enqueue-path-query "/path2"))
           vs2 (-> (visit-state/visit-state (url/scheme+authority "http://foo.bla"))
                   (assoc :ip-address (second ip-addrs))
-                  (assoc :next-fetch (from-now 200))
+                  (assoc :next-fetch (util/from-now 200))
                   (visit-state/enqueue-path-query "/path1")
                   (visit-state/enqueue-path-query "/path2"))
           vs3 (-> (visit-state/visit-state (url/scheme+authority "http://foo.toto"))
                   (assoc :ip-address (first (nnext ip-addrs)))
-                  (assoc :next-fetch (from-now 400))
+                  (assoc :next-fetch (util/from-now 400))
                   (visit-state/enqueue-path-query "/path1")
                   (visit-state/enqueue-path-query "/path2"))
           vs4 (-> (visit-state/visit-state (url/scheme+authority "http://foo.cofefe"))
                   (assoc :ip-address (second ip-addrs))
-                  (assoc :next-fetch (from-now 500))
+                  (assoc :next-fetch (util/from-now 500))
                   (visit-state/enqueue-path-query "/path1")
                   (visit-state/enqueue-path-query "/path2"))
           _ (run! #(swap! wb workbench/add-visit-state %) [vs1 vs2 vs3 vs4])
@@ -133,7 +129,7 @@
           _ (Thread/sleep 100)
           vs3-dequeued (workbench/dequeue-visit-state! wb)
           _ (do
-              (swap! wb workbench/add-visit-state (assoc vs2-dequeued :next-fetch (from-now 200)))
+              (swap! wb workbench/add-visit-state (assoc vs2-dequeued :next-fetch (util/from-now 200)))
               (Thread/sleep 100))
           vs4-dequeued (workbench/dequeue-visit-state! wb)]
       (is (= vs1 (dissoc vs1-dequeued :locked-entry)))

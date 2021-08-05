@@ -40,18 +40,18 @@
   (toString [this] (str (.seq this)))
 
   clojure.lang.IPersistentStack
-  (seq [this]
+  (seq [_this]
     (->> priority-queue seq (map first)))
 
-  (cons [this o]
+  (cons [_this o]
     (DelayQueue. (assoc priority-queue (first o) (second o))))
 
-  (empty [this] (DelayQueue. (priority-map/priority-map)))
+  (empty [_this] (DelayQueue. (priority-map/priority-map)))
 
-  (equiv [this o]
+  (equiv [_this o]
     (= priority-queue (.priority-queue o)))
 
-  (peek [this]
+  (peek [_this]
     (when-let [entry (peek priority-queue)]
       (if (<= (second entry) (System/currentTimeMillis))
         (first entry)
