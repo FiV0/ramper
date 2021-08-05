@@ -74,7 +74,7 @@
           value (peek q)
           nq    (pop q)]
       (cond (nil? value) nil
-            (and value (compare-and-set! delay-queue-atom q nq)) value
+            (compare-and-set! delay-queue-atom q nq) value
             :else (recur)))))
 
 (defn delay-queue
