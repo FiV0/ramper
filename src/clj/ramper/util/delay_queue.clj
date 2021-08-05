@@ -62,7 +62,11 @@
       (if (<= (second entry) (System/currentTimeMillis))
         (DelayQueue. (pop priority-queue))
         this)
-      this)))
+      this))
+
+  clojure.lang.Counted
+  (count [_this]
+    (count priority-queue)))
 
 (defn dequeue!
   "Takes an atom containing a delay queue and pops (if possible) the first
@@ -88,6 +92,7 @@
 
   (swap! dq conj [:foo (+ (System/currentTimeMillis) 3000)]) ; 3 seconds
   (peek @dq);; => nil
+  (count @dq);; => 1
 
   ;; wait a little
   (peek @dq);; => :foo
