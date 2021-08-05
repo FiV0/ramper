@@ -13,8 +13,8 @@
 
 (defn get-threads
   "Returns a list of threads with the given `name`."
-  [name]
-  (->> (Thread/getAllStackTraces) .keySet (filter #(= name (.getName %)))))
+  ([] (.keySet (Thread/getAllStackTraces)))
+  ([name] (->> (Thread/getAllStackTraces) .keySet (filter #(= name (.getName %))))))
 
 (defrecord ThreadWrapper [thread stop-chan])
 
@@ -25,7 +25,8 @@
   and repeatedly calls `clojure.core.async/poll!` on the channel and gracefully stops
   when a result is returned from the channel."
   [thread-fn]
-  (let [stop-chan (async/chan)
+  ;; the buffer of 1 is important as poll might not be called in case of exceptions
+  (let [stop-chan (async/chan 1)
         thread (async/thread (apply thread-fn [stop-chan]))]
     (ThreadWrapper. thread stop-chan)))
 
