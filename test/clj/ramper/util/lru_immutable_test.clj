@@ -1,5 +1,6 @@
 (ns ramper.util.lru-immutable-test
   (:require [clojure.core.cache.wrapped :as cw]
+            [ramper.util :as util]
             [ramper.util.lru :as lru :refer [Cache add check]]
             [ramper.util.lru-immutable :as lru-im]))
 
@@ -8,7 +9,7 @@
 
 (def nb-threads 128)
 (def nb-entries 10M)
-(def cache (lru-im/create-lru-cache {} 1000000 lru/string->bytes))
+(def cache (lru-im/create-lru-cache {} 1000000 util/string->bytes))
 
 (defn one-cache-loop [n]
   (loop [n n]

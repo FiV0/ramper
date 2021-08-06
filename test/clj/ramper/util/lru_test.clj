@@ -1,12 +1,13 @@
 (ns ramper.util.lru-test
-  (:require [ramper.util.lru :as lru :refer [Cache add check]]))
+  (:require [ramper.util :as util]
+            [ramper.util.lru :as lru :refer [Cache add check]]))
 
 (defn random-string [n]
   (str (rand-int n)))
 
 (def nb-threads 128)
 (def nb-entries 10M)
-(def cache (lru/create-lru-cache 1000000 lru/string->bytes nb-threads))
+(def cache (lru/create-lru-cache 1000000 util/string->bytes nb-threads))
 
 (defn one-cache-loop [n]
   (loop [n n]
