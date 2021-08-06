@@ -38,7 +38,7 @@
                           :from-sieve-to-overflow    0
                           :from-sieve-to-workbench   0
                           :deleted-from-sieve        0}]
-      (when-not (runtime-config/stop?)
+      (when-not (runtime-config/stop? @runtime-config)
         (let [workbench-full (frontier/workbench-full?)
               front-too-small (front-too-small? @workbench @todo-queue @required-front-size)
               now (System/currentTimeMillis)]

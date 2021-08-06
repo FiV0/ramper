@@ -30,8 +30,8 @@
 
 (defn stop?
   "Returns true when the agent should stop."
-  []
-  (:ramper/stop? @runtime-config))
+  ([] (stop? @runtime-config))
+  ([runtime-config] (:ramper/runtime-stop? runtime-config)))
 
 (defn approximate-url-cache-threshold
   "Returns the approximate size for the url cache based on
@@ -47,8 +47,3 @@
     (when-not (.exists sieve-dir)
       (.mkdirs sieve-dir))
     sieve-dir))
-
-(defn runtime-stop?
-  "Returns true when the agent should be stopped."
-  []
-  (:ramper/runtime-stop @runtime-config))

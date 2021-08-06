@@ -129,6 +129,6 @@
        (str/join ".")))
 
 (defn from-now
-  "Returns a timestamp `millis` milliseconds from the invocation."
+  "Returns a timestamp `millis` milliseconds from now."
   [millis]
   (+ (System/currentTimeMillis) millis))
