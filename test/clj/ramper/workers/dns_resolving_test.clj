@@ -26,7 +26,7 @@
                    :new-visit-states new-visit-states}
           tw1 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 1))
           tw2 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 2))]
-      (Thread/sleep 100)
+      (Thread/sleep 200)
       (is (true? (thread-util/stop tw1)))
       (is (true? (thread-util/stop tw2)))
       (is (= 1 (count @unknown-hosts)))
