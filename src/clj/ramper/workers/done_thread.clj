@@ -35,22 +35,26 @@
     (loop [i 0]
       (when-not (runtime-config/stop? @runtime-config)
         (if-let [{:keys [next-fetch] :as visit-state }(pq/dequeue! done-queue)]
-          (cond
-            ;; purge condition
-            (= Long/MAX_VALUE next-fetch)
-            (swap! workbench workbench/purge-visit-state visit-state)
+          (do
+            (cond
+              ;; purge condition
+              (= Long/MAX_VALUE next-fetch)
+              (swap! workbench workbench/purge-visit-state visit-state)
 
-            ;; refill condition
-            (and (= 0 (visit-state/size visit-state))
-                 (< 0 (virtual/count virtualizer visit-state)))
-            (swap! refill-queue conj visit-state)
+              ;; refill condition
+              ;; TODO: test if this needs to pass through the distributor, why not go directly
+              ;; to the workbench
+              (and (= 0 (visit-state/size visit-state))
+                   (< 0 (virtual/count virtualizer visit-state)))
+              (swap! refill-queue conj visit-state)
 
-            ;; we also purge if there no more urls on disk
-            (= 0 (visit-state/size visit-state))
-            (swap! workbench workbench/purge-visit-state visit-state)
+              ;; we also purge if there no more urls on disk
+              (= 0 (visit-state/size visit-state))
+              (swap! workbench workbench/purge-visit-state visit-state)
 
-            :else
-            (swap! workbench workbench/add-visit-state visit-state))
+              :else
+              (swap! workbench workbench/add-visit-state visit-state))
+            (recur 0))
           (do
             (Thread/sleep (bit-shift-left 1 (max i 10)))
             (recur (inc i))))))

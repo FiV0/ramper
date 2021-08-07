@@ -68,6 +68,7 @@
   (io!
    (.remove disk-queues (visit-state-key visit-state))))
 
+;; TODO is the visit-state here really necessary?
 (defn enqueue
   "Enqueues a given `url` to the virtualizer for the given `visit-state`."
   [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state url]
