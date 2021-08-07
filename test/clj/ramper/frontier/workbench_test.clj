@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is testing]]
             [ramper.frontier.workbench :as workbench]
             [ramper.frontier.workbench.visit-state :as visit-state]
+            [ramper.frontier.workbench.workbench-entry :as we]
             [ramper.util :as util]
             [ramper.util.url :as url])
   (:import (java.net InetAddress)))
@@ -97,6 +98,19 @@
                       workbench/peek-visit-state))
             "workbench should be empty, as all entries are busy")
         (is (false? (workbench/scheme+authority-present? wb (url/scheme+authority "http://foo.bla"))))))))
+
+(deftest workbench-purge-test
+  (testing "workbench purge testing"
+    (let [ip (first ip-addrs)
+          vs1 (-> (visit-state/visit-state (url/scheme+authority "http://foo.bar"))
+                  (assoc :ip-address ip)
+                  (assoc :next-fetch (util/from-now 300)))
+          wb (atom (-> (workbench/workbench)
+                       (update :address-to-busy-entry assoc (workbench/hash-ip ip)
+                               (we/workbench-entry ip))))]
+      (swap! wb workbench/purge-visit-state vs1)
+      (is (nil? (workbench/peek-visit-state @wb)))
+      (is (zero? (workbench/nb-workbench-entries @wb))))))
 
 (deftest workbench-atom-testing
   (testing "workbench with atom"

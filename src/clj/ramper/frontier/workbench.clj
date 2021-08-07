@@ -38,7 +38,7 @@
 
 ;; TODO: check why Arrays/hashCode alone might not be good enough
 ;; add murmurhash3 on top?
-(defn- hash-ip [ip-address]
+(defn hash-ip [ip-address]
   (Arrays/hashCode ip-address))
 
 (defn workbench
@@ -173,10 +173,12 @@
   (let [ip-hash (hash-ip ip-address)
         new-workbench (update workbench :scheme+authorities disj scheme+authority)]
     (if-let [new-wb-entry (get address-to-busy-entry ip-hash)]
-      (-> new-workbench
-          (update :address-to-busy-entry dissoc ip-hash)
-          (update :address-to-entry assoc ip-hash new-wb-entry)
-          (update :entries conj new-wb-entry))
+      (let [new-workbench (update new-workbench :address-to-busy-entry dissoc ip-hash)]
+        (if (not (we/empty? new-wb-entry))
+          (-> new-workbench
+              (update :address-to-entry assoc ip-hash new-wb-entry)
+              (update :entries conj new-wb-entry))
+          new-workbench))
       new-workbench)))
 
 (defn dequeue-visit-state!
