@@ -17,3 +17,5 @@ test.log
 .classpath
 .settings
 .project
+resources/bookmarks.json
+resources/urls.txt
