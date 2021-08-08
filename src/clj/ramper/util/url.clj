@@ -66,6 +66,21 @@
   [uri-like]
   (instance? URI uri-like))
 
+(defn relative?
+  "Returns true if `uri-like` is a relative uri."
+  [uri-like]
+  (let [uri (uri/uri uri-like)]
+    (and (nil? (:scheme uri)) (nil? (:host uri)))))
+
+(defn make-absolute
+  "Given a `parent` uri and a (probably relative) `child` uri, returns the
+  absolute child uri.`"
+  [parent child]
+  (-> child
+      uri/uri
+      (assoc :scheme (:scheme parent)
+             :host (:host parent))))
+
 (defn hash-url
   "Hashes a lambdaisland.uri.URI with the 128 bit MurmurHash3
   yielding a vector of two longs."
