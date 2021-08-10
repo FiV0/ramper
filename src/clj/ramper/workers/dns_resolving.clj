@@ -80,8 +80,8 @@
                                    (inc retries)
                                    0))
                           (assoc :last-exception UnknownHostException))]
-                  (when (< retries (get constants/exception-to-max-retries UnknownHostException))
-                    (let [delay (bit-shift-left (get constants/exception-to-wait-time UnknownHostException) retries)
+                  (when (< retries (constants/get-exception-to-max-retries UnknownHostException))
+                    (let [delay (bit-shift-left (constants/get-exception-to-wait-time UnknownHostException) retries)
                           next-fetch (util/from-now delay)
                           visit-state (assoc visit-state :next-fetch next-fetch)]
                       (log/info :retry-dns-resolution {:delay delay :visit-state visit-state})
