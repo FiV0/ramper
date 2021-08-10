@@ -13,6 +13,8 @@
             [repl-sessions.url-extraction]
             [repl-sessions.utils :refer [wrap-timer]])
   (:import (java.net InetSocketAddress URI)
+           (org.apache.http.impl DefaultConnectionReuseStrategy)
+           (org.apache.http.impl.client HttpClients)
            (org.xbill.DNS Address)))
 
 ;; test 3 things
@@ -77,7 +79,8 @@
 ;; simple clj-http testing
 (def dns-resolver (dns-resolving/java-dns-resolver))
 (def cm (conn/make-reusable-conn-manager {:dns-resolver dns-resolver}))
-(def clj-http-client (core/build-http-client {} false cm))
+(def client-builder (.. (HttpClients/custom) (setConnectionReuseStrategy DefaultConnectionReuseStrategy/INSTANCE )))
+(def clj-http-client (core/build-http-client {:http-client-builder client-builder} false cm))
 
 (wrap-timer
  (doseq [url (take 100 urls)]

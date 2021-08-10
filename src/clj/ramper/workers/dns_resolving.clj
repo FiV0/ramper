@@ -91,5 +91,5 @@
           (recur))))
     (catch Throwable t
       (log/error :unexpected-ex (Throwable->map t))))
-  (log/info :dns-thread :graceful-shutdown)
+  (log/info :graceful-shutdown {:index index})
   true)

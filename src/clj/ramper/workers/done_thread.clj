@@ -34,7 +34,7 @@
   (try
     (loop [i 0]
       (when-not (runtime-config/stop? @runtime-config)
-        (if-let [{:keys [next-fetch] :as visit-state }(pq/dequeue! done-queue)]
+        (if-let [{:keys [next-fetch] :as visit-state} (pq/dequeue! done-queue)]
           (do
             (cond
               ;; purge condition
