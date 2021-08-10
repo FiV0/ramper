@@ -3,7 +3,7 @@
 
 ;; Theses constants are copied from BUbing.
 
-(def exception-to-wait-time
+(def ^:private exception-to-wait-time
   {java.net.NoRouteToHostException                  (.. TimeUnit/HOURS (toMillis 1))
    java.net.SocketException                         (.. TimeUnit/MINUTES (toMillis 1))
    java.net.SocketTimeoutException                  (.. TimeUnit/MINUTES (toMillis 1))
@@ -18,7 +18,10 @@
    org.apache.http.TruncatedChunkException          (.. TimeUnit/MINUTES (toMillis 1))
    org.apache.http.MalformedChunkCodingException    (.. TimeUnit/MINUTES (toMillis 1))})
 
-(def exception-to-max-retries
+(defn get-exception-to-wait-time [ex]
+  (get exception-to-wait-time ex (.. TimeUnit/HOURS (toMillis 1))))
+
+(def ^:private exception-to-max-retries
   {java.net.UnknownHostException 2
    javax.net.ssl.SSLPeerUnverifiedException 0
    org.apache.http.client.CircularRedirectException 0
@@ -28,6 +31,9 @@
    org.apache.http.NoHttpResponseException 2
    org.apache.http.TruncatedChunkException 1
    org.apache.http.MalformedChunkCodingException 1})
+
+(defn get-exception-to-max-retries [ex]
+  (get exception-to-max-retries ex 5))
 
 (def exception-host-killer
   #{java.net.NoRouteToHostException
