@@ -39,19 +39,21 @@
 
 (def global-host-map (atom {}))
 
-(def global-java-dns-resolver
-  "A global instance of `org.apache.http.conn.DnsResolver` that tries to look up
+(defn global-java-dns-resolver
+  "Creates an instance of `org.apache.http.conn.DnsResolver` that tries to look up
   the ip from the `global-host-map` before delegating to dnsjava."
-  (reify
-    org.apache.http.conn.DnsResolver
-    (^"[Ljava.net.InetAddress;" resolve [this ^String hostname]
-     (if-let [address (get @global-host-map hostname)]
-       (into-array [(InetAddress/getByAddress hostname (byte-array address))])
-       (cond
-         (= "localhost" hostname) loopback
-         (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
-         :else (let [hostname (if (str/ends-with? hostname ".") hostname (str hostname "."))]
-                 (Address/getAllByName hostname)))))))
+  ([] (global-java-dns-resolver global-host-map))
+  ([global-host-map]
+   (reify
+     org.apache.http.conn.DnsResolver
+     (^"[Ljava.net.InetAddress;" resolve [this ^String hostname]
+      (if-let [address (get @global-host-map hostname)]
+        (into-array [(InetAddress/getByAddress hostname (byte-array address))])
+        (cond
+          (= "localhost" hostname) loopback
+          (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
+          :else (let [hostname (if (str/ends-with? hostname ".") hostname (str hostname "."))]
+                  (Address/getAllByName hostname))))))))
 
 (defn dns-thread [{:keys [dns-resolver workbench unknown-hosts
                           new-visit-states] :as _thread-data}
@@ -66,6 +68,7 @@
                                                          (pq/dequeue! new-visit-states))]
           (let [host (-> visit-state :scheme+authority uri/uri :host)]
             (try
+              ;; TODO should we maybe store InetAddress4 format?
               (let [ip-address (-> (.resolve dns-resolver host) first .getAddress)]
                 (swap! workbench workbench/add-visit-state (-> visit-state
                                                                (assoc :ip-address ip-address)
