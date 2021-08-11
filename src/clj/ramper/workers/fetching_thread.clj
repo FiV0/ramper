@@ -20,7 +20,8 @@
 ;; results data is of the form
 ;; {:url ... :response ...}
 
-(defn- set-connection-reuse [^HttpClientBuilder builder req]
+;; TODO can the cookie store be set similarly
+(defn set-connection-reuse [^HttpClientBuilder builder req]
   (when (:connection-reuse req)
     (.setConnectionReuseStrategy builder DefaultConnectionReuseStrategy/INSTANCE)))
 
@@ -36,46 +37,51 @@
 ;; TODO fetch-filter function for urls
 ;; TODO blacklisted hosts
 ;; TODO blacklisted ips
+;; TODO cookie size limit
 
-(defn fetch-data [{:keys [http-client visit-state host-map runtime-config] :as _fetch-thread-data}]
+(defn fetch-data [{:keys [http-client visit-state host-map runtime-config cookie-store] :as _fetch-thread-data}]
   (let [scheme+authority (str (:scheme+authority visit-state))
         url (str (:scheme+authority visit-state) (visit-state/first-path visit-state))
         scheme+authority-delay (:ramper/scheme+authority-delay @runtime-config)]
     ;; TODO check if there is not a better way to do this with the host-map
     (swap! host-map assoc scheme+authority (:ip-address visit-state))
     (try
-      (let [resp (client/get url {:http-client http-client :headers default-headers})
+      (let [resp (client/get url {:http-client http-client
+                                  :headers default-headers
+                                  :cookie-store cookie-store
+                                  :throw-exceptions false})
             now (System/currentTimeMillis)
             fetched-data {:url (uri/uri url) :response resp}
             visit-state (-> visit-state
                             visit-state/dequeue-path-query
-                            (assoc :next-fetch (+ now scheme+authority-delay)))]
+                            (assoc :next-fetch (+ now scheme+authority-delay)
+                                   :last-exception nil))]
         [fetched-data visit-state true])
       ;; normal exception case
       (catch IOException ex
-        (log/warn :fetch-ex {:url url :ex ex})
-        (let [now (System/currentTimeMillis)
-              {:keys [last-exception] :as visit-state}
-              (cond
-                (nil? (:last-exception visit-state))
-                (assoc visit-state :last-exception ex :retries 0)
+        (let [exception-type (type ex)
+              now (System/currentTimeMillis)
+              visit-state (cond
+                            (nil? (:last-exception visit-state))
+                            (assoc visit-state :last-exception exception-type :retries 0)
 
-                (= (:last-exception visit-state) ex)
-                (update visit-state :retries inc)
+                            (= (:last-exception visit-state) exception-type)
+                            (update visit-state :retries inc)
 
-                :else
-                (assoc visit-state :last-exception ex))]
+                            :else
+                            (assoc visit-state :last-exception exception-type))]
+          (log/warn :fetch-ex {:url url :ex exception-type})
           (cond
             ;; normal retry case
-            (< (:retries visit-state) (constants/get-exception-to-max-retries last-exception))
+            (< (:retries visit-state) (constants/get-exception-to-max-retries exception-type))
             (let [visit-state (assoc visit-state :next-fetch (+ now scheme+authority-delay))]
-              (log/info :url-retry {:url url :ex last-exception})
+              (log/info :url-retry {:url url :ex exception-type :retries (:retries visit-state)})
               [nil visit-state true])
 
             ;; purge case
-            (contains? constants/exception-host-killer last-exception)
+            (contains? constants/exception-host-killer exception-type)
             (do
-              (log/warn :visit-state-purge {:url url :ex last-exception})
+              (log/warn :visit-state-purge {:url url :ex exception-type})
               [nil visit-state false])
 
             ;; else just dequeue and continue
@@ -84,7 +90,7 @@
                                   visit-state/dequeue-path-query
                                   (assoc :next-fetch (+ now scheme+authority-delay)
                                          :last-exception nil))]
-              (log/info :url-killed {:url url :ex last-exception})
+              (log/info :url-killed {:url url :ex exception-type})
               [nil visit-state true]))))
       ;; bad exception case
       (catch Exception should-not-happen
@@ -127,7 +133,8 @@
                     (run! #(cookies/add-cookie cookie-store %) (:cookies vs))
                     (let [[fetched-data vs continue] (fetch-data (assoc thread-data
                                                                         :http-client http-client
-                                                                        :visit-state vs))
+                                                                        :visit-state vs
+                                                                        :cookie-store cookie-store))
                           now (System/currentTimeMillis)]
                       (cond
                         ;; no error case
@@ -154,3 +161,5 @@
         (log/error :unexpected-ex (Throwable->map t)))))
   (log/info :fetching-thread :graceful-shutdown)
   true)
+
+(constants/get-exception-to-max-retries )
