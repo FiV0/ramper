@@ -39,12 +39,11 @@
 ;; TODO blacklisted ips
 ;; TODO cookie size limit
 
-(defn fetch-data [{:keys [http-client visit-state host-map runtime-config cookie-store] :as _fetch-thread-data}]
+(defn fetch-data [{:keys [http-client dns-resolver visit-state runtime-config cookie-store] :as _fetch-thread-data}]
   (let [scheme+authority (str (:scheme+authority visit-state))
         url (str (:scheme+authority visit-state) (visit-state/first-path visit-state))
         scheme+authority-delay (:ramper/scheme+authority-delay @runtime-config)]
-    ;; TODO check if there is not a better way to do this with the host-map
-    (swap! host-map assoc scheme+authority (:ip-address visit-state))
+    (.addHost dns-resolver (:host scheme+authority) (:ip-address visit-state))
     (try
       (let [resp (client/get url {:http-client http-client
                                   :headers default-headers
@@ -103,10 +102,10 @@
                               (assoc :next-fetch (+ now scheme+authority-delay)))]
           [nil visit-state true]))
       (finally
-        (swap! host-map dissoc scheme+authority)))))
+        (.deleteHost dns-resolver (:host scheme+authority))))))
 
 
-(defn fetching-thread [{:keys [connection-manager _host-map results-queue workbench
+(defn fetching-thread [{:keys [connection-manager _dns-resolver results-queue workbench
                                runtime-config todo-queue done-queue] :as thread-data}
                        index stop-chan]
   (thread-utils/set-thread-name (str *ns* "-" index))
@@ -161,5 +160,3 @@
         (log/error :unexpected-ex (Throwable->map t)))))
   (log/info :fetching-thread :graceful-shutdown)
   true)
-
-(constants/get-exception-to-max-retries )

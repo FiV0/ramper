@@ -30,30 +30,40 @@
      org.apache.http.conn.DnsResolver
      (^"[Ljava.net.InetAddress;" resolve [this ^String hostname]
       (if-let [address (get host-map hostname)]
-        (into-array [(InetAddress/getByAddress hostname (byte-array address))])
+        (into-array [(InetAddress/getByAddress hostname address)])
         (cond
           (= "localhost" hostname) loopback
           (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
           :else (let [hostname (if (str/ends-with? hostname ".") hostname (str hostname "."))]
                   (Address/getAllByName hostname))))))))
 
-(def global-host-map (atom {}))
+(defprotocol HostToIpAddress
+  (addHost [this host ip-address])
+  (deleteHost [this host]))
 
 (defn global-java-dns-resolver
   "Creates an instance of `org.apache.http.conn.DnsResolver` that tries to look up
   the ip from the `global-host-map` before delegating to dnsjava."
-  ([] (global-java-dns-resolver global-host-map))
-  ([global-host-map]
-   (reify
-     org.apache.http.conn.DnsResolver
-     (^"[Ljava.net.InetAddress;" resolve [this ^String hostname]
-      (if-let [address (get @global-host-map hostname)]
-        (into-array [(InetAddress/getByAddress hostname (byte-array address))])
-        (cond
-          (= "localhost" hostname) loopback
-          (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
-          :else (let [hostname (if (str/ends-with? hostname ".") hostname (str hostname "."))]
-                  (Address/getAllByName hostname))))))))
+  ([] (global-java-dns-resolver {}))
+  ([host-map]
+   (let [global-host-map (atom host-map)]
+     (reify
+       org.apache.http.conn.DnsResolver
+       (^"[Ljava.net.InetAddress;" resolve [this ^String hostname]
+        (if-let [address (get @global-host-map hostname)]
+          (into-array [(InetAddress/getByAddress hostname address)])
+          (cond
+            (= "localhost" hostname) loopback
+            (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
+            :else (let [hostname (if (str/ends-with? hostname ".") hostname (str hostname "."))]
+                    (Address/getAllByName hostname)))))
+
+       HostToIpAddress
+       (addHost [_ host ip-address]
+         (swap! global-host-map assoc host ip-address))
+
+       (deleteHost [_ host]
+         (swap! global-host-map dissoc host))))))
 
 (defn dns-thread [{:keys [dns-resolver workbench unknown-hosts
                           new-visit-states] :as _thread-data}

@@ -19,8 +19,7 @@
 (deftest fetch-data-test
   (let [ip-address (.getAddress (Address/getByName "httpbin.org"))
         runtime-config (atom {:ramper/scheme+authority-delay 2000})
-        host-map (atom {})
-        dns-resolver (dns-resolving/global-java-dns-resolver host-map)
+        dns-resolver (dns-resolving/global-java-dns-resolver)
         cookie-store (cookies/cookie-store)
         connection-manager (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
         client (core/build-http-client {:http-builder-fns [fetching-thread/set-connection-reuse]}
@@ -38,7 +37,7 @@
                             (assoc :ip-address ip-address)
                             (visit-state/enqueue-path-query "/foo/bar")
                             (visit-state/enqueue-path-query "/something/else"))
-        fetch-thread-data {:http-client client :host-map host-map
+        fetch-thread-data {:http-client client :dns-resolver dns-resolver
                            :cookie-store cookie-store :runtime-config runtime-config}]
     (testing "simple request with cookies"
       (let [now (System/currentTimeMillis)
@@ -77,3 +76,10 @@
         (is (false? continue))
         (is (= 2 (:retries visit-state)))
         (is (= java.net.UnknownHostException (:last-exception visit-state)))))))
+
+;; (deftest fetching-thread-test
+;;   (let [runtime-config (atom {:ramper/scheme+authority-delay 2000})
+;;         host-map (atom {})
+;;         dns-resolver (dns-resolving/global-java-dns-resolver host-map)
+;;         conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
+;;         ]))

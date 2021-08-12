@@ -6,7 +6,18 @@
             [ramper.util.delay-queue :as delay-queue]
             [ramper.util.thread :as thread-util]
             [ramper.util.url :as url]
-            [ramper.workers.dns-resolving :as dns-resolving]))
+            [ramper.workers.dns-resolving :as dns-resolving])
+  (:import (java.util Arrays)
+           (org.xbill.DNS Address)))
+
+(deftest global-java-dns-resolver-test
+  (testing "global-java-dns-resolver"
+    (let [host "httpbin.org"
+          dns-resolver (dns-resolving/global-java-dns-resolver)
+          address (.getAddress (Address/getByName host))]
+      (.addHost dns-resolver host address)
+      (is (true? (Arrays/equals address (-> (.resolve dns-resolver host) first .getAddress))))
+      (.deleteHost dns-resolver host))))
 
 (deftest dns-thread-test
   (testing "ramper.worker.dns-resolving/dns-thread"
