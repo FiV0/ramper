@@ -6,6 +6,7 @@
             [clojure.test :refer [deftest is testing]]
             [clojure.spec.alpha :as s]
             [ramper.workers.fetched-data :as fetched-data]
+            [ramper.frontier.workbench :as workbench]
             [ramper.frontier.workbench.visit-state :as visit-state]
             [ramper.util :as util]
             [ramper.util.thread :as thread-util]
@@ -34,7 +35,6 @@
                                  (visit-state/enqueue-path-query "/status/400")
                                  (visit-state/enqueue-path-query "/something/else"))
         bad-visit-state (-> (visit-state/visit-state (url/scheme+authority "https://asdf.asdf"))
-                            (assoc :ip-address ip-address)
                             (visit-state/enqueue-path-query "/foo/bar")
                             (visit-state/enqueue-path-query "/something/else"))
         fetch-thread-data {:http-client client :dns-resolver dns-resolver
@@ -77,9 +77,49 @@
         (is (= 2 (:retries visit-state)))
         (is (= java.net.UnknownHostException (:last-exception visit-state)))))))
 
-;; (deftest fetching-thread-test
-;;   (let [runtime-config (atom {:ramper/scheme+authority-delay 2000})
-;;         host-map (atom {})
-;;         dns-resolver (dns-resolving/global-java-dns-resolver host-map)
-;;         conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
-;;         ]))
+(deftest fetching-thread-test
+  (let [runtime-config (atom {:ramper/keepalive-time 1000
+                              :ramper/scheme+authority-delay 2000
+                              :ramper/ip-delay 2000})
+        host1 "clojure.org"
+        host2 "httpbin.org"
+        host3 "finnvolkel.com" ;; explicitly using a wrong ip
+        host1-ip (.getAddress (Address/getByName host1))
+        host2-ip (.getAddress (Address/getByName host2))
+        host3-ip (.getAddress (Address/getByName host3))
+        dns-resolver (dns-resolving/global-java-dns-resolver)
+        conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
+        visit-state (-> (visit-state/visit-state (url/scheme+authority "https://clojure.org"))
+                        (assoc :ip-address host1-ip
+                               :next-fetch (util/from-now -30))
+                        (visit-state/enqueue-path-query "")
+                        (visit-state/enqueue-path-query "/about/rational"))
+        visit-state-with-400-resp (-> (visit-state/visit-state (url/scheme+authority "https://httpbin.org"))
+                                      (assoc :ip-address host2-ip
+                                             :next-fetch (util/from-now -20))
+                                      (visit-state/enqueue-path-query "/status/400")
+                                      (visit-state/enqueue-path-query "/get"))
+        ;; we use a wrong ip to force an certificate error
+        bad-visit-state (-> (visit-state/visit-state (url/scheme+authority "https://asdf.asdf"))
+                            (assoc :ip-address host3-ip
+                                   :next-fetch (util/from-now -10))
+                            (visit-state/enqueue-path-query "/foo/bar")
+                            (visit-state/enqueue-path-query "/something/else"))
+        ;; we let things go through the workbench so bookkeeping in the workbench is correct
+        workbench (atom (reduce #(workbench/add-visit-state %1 %2 )
+                                (workbench/workbench)
+                                [visit-state visit-state-with-400-resp bad-visit-state]))
+        results-queue (atom clojure.lang.PersistentQueue/EMPTY)
+        todo-queue (atom (into clojure.lang.PersistentQueue/EMPTY
+                               (repeatedly 3 #(workbench/dequeue-visit-state! workbench))))
+        done-queue (atom clojure.lang.PersistentQueue/EMPTY)
+        thread-data {:connection-manager conn-mgr :dns-resolver dns-resolver
+                     :workbench workbench :results-queue results-queue
+                     :runtime-config runtime-config :todo-queue todo-queue
+                     :done-queue done-queue}
+        tw (thread-util/thread-wrapper (partial fetching-thread/fetching-thread thread-data 1))]
+    ;; (Thread/sleep 2000)
+    ;; (is (true? (thread-util/stop tw)))
+    ))
+
+;; (fetching-thread-test)

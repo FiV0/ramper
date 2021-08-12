@@ -40,10 +40,12 @@
 ;; TODO cookie size limit
 
 (defn fetch-data [{:keys [http-client dns-resolver visit-state runtime-config cookie-store] :as _fetch-thread-data}]
-  (let [scheme+authority (str (:scheme+authority visit-state))
-        url (str (:scheme+authority visit-state) (visit-state/first-path visit-state))
+  (let [scheme+authority (:scheme+authority visit-state)
+        url (str scheme+authority (visit-state/first-path visit-state))
         scheme+authority-delay (:ramper/scheme+authority-delay @runtime-config)]
-    (.addHost dns-resolver (:host scheme+authority) (:ip-address visit-state))
+    (if (contains? visit-state :ip-address)
+      (.addHost dns-resolver (:host scheme+authority) (:ip-address visit-state))
+      (log/warn :missing-ip-address {:visit-state visit-state}))
     (try
       (let [resp (client/get url {:http-client http-client
                                   :headers default-headers
@@ -155,8 +157,11 @@
                   (swap! done-queue conj vs))))
             (let [time (bit-shift-left 1 (max 10 i))]
               (Thread/sleep time)
+              ;; TODO add frontier growing here
+              (log/info :fetching-thread {:sleep-time time})
               (recur (inc i) (+ wait-time time))))))
       (catch Throwable t
         (log/error :unexpected-ex (Throwable->map t)))))
-  (log/info :fetching-thread :graceful-shutdown)
+  (log/info :graceful-shutdown {:type :fetching-thread
+                                :index index})
   true)

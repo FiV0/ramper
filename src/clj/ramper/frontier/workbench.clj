@@ -112,8 +112,7 @@
               (update-workbench workbench old-wb-entry (assoc old-wb-entry :next-fetch next-fetch))
               [old-wb-entry (get address-to-busy-entry ip-hash)]
               ;; here we assume old-wb-entry is not in entries
-              (-> workbench
-                  (update :address-to-busy-entry assoc ip-hash (assoc old-wb-entry :next-fetch next-fetch)))
+              (update workbench :address-to-busy-entry assoc ip-hash (assoc old-wb-entry :next-fetch next-fetch))
               :else
               (throw (IllegalStateException. (str "ip address: " (util/ip-address->str ip-address) "not in workbench!!!"))))))
 
@@ -129,7 +128,7 @@
   be called in conjunction with `peek-visit-state` or best with `dequeue-visit-state`,
   to keep the internals of the workbench intact."
   [^Workbench {:keys [entries] :as workbench}]
-  (let [{:keys [ip-address]:as old-wb-entry} (peek entries)
+  (let [{:keys [ip-address] :as old-wb-entry} (peek entries)
         new-wb-entry (we/remove old-wb-entry)
         ip-hash (hash-ip ip-address)]
     (-> workbench
