@@ -103,6 +103,6 @@
                   ))))
           (recur))))
     (catch Throwable t
-      (log/error :unexpected-ex (Throwable->map t))))
+      (log/error :unexpected-ex {:ex t})))
   (log/info :graceful-shutdown {:index index})
   true)

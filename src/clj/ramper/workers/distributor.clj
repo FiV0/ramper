@@ -122,6 +122,6 @@
                 (recur (inc round) stats)))))
 
     (catch Throwable t
-      (log/error :unexpected-ex (Throwable->map t))))
+      (log/error :unexpected-ex {:ex t})))
   (log/info :distributor-thread :graceful-shutdown)
   true)

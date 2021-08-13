@@ -59,6 +59,6 @@
             (Thread/sleep (bit-shift-left 1 (max i 10)))
             (recur (inc i))))))
     (catch Throwable t
-      (log/error :unexpected-ex (Throwable->map t))))
+      (log/error :unexpected-ex {:ex t})))
   (log/info :todo-thread :graceful-shutdown)
   true)

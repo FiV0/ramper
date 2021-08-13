@@ -33,6 +33,6 @@
                     (:ramper/max-urls-per-scheme+authority @runtime-config)))
         (swap! todo-queue conj visit-state)))
     (catch Throwable t
-      (log/error :unexpected-ex (Throwable->map t))))
+      (log/error :unexpected-ex {:ex t})))
   (log/info :todo-thread :graceful-shutdown)
   true)
