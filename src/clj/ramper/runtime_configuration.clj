@@ -15,7 +15,7 @@
                            :ramper/keepalive-time 2000 ;;
                            :ramper/runtime-stop false
                            :ramper/runtime-pause false
-                           :ramper/cookie-max-byte-size 2048
+                           :ramper/cookies-max-byte-size 2048
                            :ramper/url-cache-max-byte-size (* 1024 1024 1024)
                            :ramper/root-dir root-dir
                            :ramper/sieve-size (* 64 1024 1024)

@@ -106,6 +106,24 @@
       (finally
         (.deleteHost dns-resolver (:host scheme+authority))))))
 
+(defn- estimate-cookie-size
+  "Returns an approximate size of the cookie in bytes."
+  [cookie]
+  (->> [(.getName cookie) (.getValue cookie) (.getDomain cookie) (.getPath cookie)]
+       (map count)
+       (apply +)))
+
+(defn limit-cookies
+  "Returns a sequence of cookies limited to the overall size `cookies-max-byte-size`."
+  [cookies cookies-max-byte-size]
+  (loop [[cookie & cookies] cookies res [] total-size 0]
+    (if (nil? cookie) res
+        (let [cookie-size (estimate-cookie-size cookie)
+              total-size (+ total-size cookie-size)]
+          (if (< total-size cookies-max-byte-size)
+            (recur cookies (conj res cookie) total-size)
+            res)))))
+
 
 (defn fetching-thread [{:keys [connection-manager _dns-resolver results-queue workbench
                                runtime-config todo-queue done-queue] :as thread-data}
@@ -117,8 +135,7 @@
         ip-delay (:ramper/ip-delay @runtime-config)
         http-client (core/build-http-client {:http-builder-fns [set-connection-reuse]}
                                             false connection-manager)
-        ;; cookie-max-byte-size (:ramper/cookie-max-byte-size @runtime-config)
-        ]
+        cookies-max-byte-size (:ramper/cookies-max-byte-size @runtime-config)]
     (try
       (loop [i 0 wait-time 0]
         (when-not (async/poll! stop-chan)
@@ -143,7 +160,9 @@
                         (do
                           (s/assert ::fetched-data/fetched-data fetched-data)
                           (swap! results-queue conj fetched-data)
-                          (recur (visit-state/set-cookies vs (seq (.getCookies cookie-store)))))
+                          (recur (->>
+                                  (limit-cookies (seq (.getCookies cookie-store)) cookies-max-byte-size)
+                                  (visit-state/set-cookies vs ))))
                         ;; an error occurred but the visit-state does not need to be purged
                         continue
                         (do
