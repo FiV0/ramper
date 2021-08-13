@@ -1,18 +1,17 @@
 (ns ramper.workers.fetching-thread-test
-  (:require [clj-http.client :as client]
-            [clj-http.conn-mgr :as conn]
+  (:require [clj-http.conn-mgr :as conn]
             [clj-http.cookies :as cookies]
             [clj-http.core :as core]
-            [clojure.test :refer [deftest is testing]]
             [clojure.spec.alpha :as s]
+            [clojure.test :refer [deftest is testing]]
             [matcher-combinators.test]
-            [ramper.workers.fetched-data :as fetched-data]
             [ramper.frontier.workbench :as workbench]
             [ramper.frontier.workbench.visit-state :as visit-state]
             [ramper.util :as util]
             [ramper.util.thread :as thread-util]
             [ramper.util.url :as url]
             [ramper.workers.dns-resolving :as dns-resolving]
+            [ramper.workers.fetched-data :as fetched-data]
             [ramper.workers.fetching-thread :as fetching-thread])
   (:import (org.xbill.DNS Address)))
 

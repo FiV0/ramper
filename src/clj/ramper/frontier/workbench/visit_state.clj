@@ -28,6 +28,7 @@
 ;; TODO robots stuff
 ;; TODO think about whether having explicit getters/setters or just assoc data directly.
 ;; tending to the latter.
+;; TODO path-query naming, should we just talk about a path?
 
 (defrecord VisitState [scheme+authority next-fetch robots-filter cookies
                        last-exception retries path-queries]

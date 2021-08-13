@@ -37,9 +37,25 @@
 ;; TODO fetch-filter function for urls
 ;; TODO blacklisted hosts
 ;; TODO blacklisted ips
-;; TODO cookie size limit
 
-(defn fetch-data [{:keys [http-client dns-resolver visit-state runtime-config cookie-store] :as _fetch-thread-data}]
+(defn fetch-data
+  "Builds a url from the visit-state and dequeues the first path-query in
+  case of success. It serves as a helper function for a fetching thread.
+
+  The given fetch-thread-data map must contain.
+
+  :http-client - an http client with which to do the request.
+
+  :dns-resolver - a dns resolver implementing org.apache.http.conn.DnsResolver
+  and ramper.workers.dns-resolving.HostToIpAddress. The above http-client
+  must be intialized with this dns resolver.
+
+  :visit-state - the visit state from which to build the queried url
+
+  :runtime-config - an atom wrapping the runtime config of the agent
+
+  :cookie-store - the cookie store of the http-client"
+  [{:keys [http-client dns-resolver visit-state runtime-config cookie-store] :as _fetch-thread-data}]
   (let [scheme+authority (:scheme+authority visit-state)
         url (str scheme+authority (visit-state/first-path visit-state))
         scheme+authority-delay (:ramper/scheme+authority-delay @runtime-config)]
@@ -107,14 +123,14 @@
         (.deleteHost dns-resolver (:host scheme+authority))))))
 
 (defn- estimate-cookie-size
-  "Returns an approximate size of the cookie in bytes."
+  "Returns an approximate size of the `cookie` in bytes."
   [cookie]
   (->> [(.getName cookie) (.getValue cookie) (.getDomain cookie) (.getPath cookie)]
        (map count)
        (apply +)))
 
 (defn limit-cookies
-  "Returns a sequence of cookies limited to the overall size `cookies-max-byte-size`."
+  "Returns a sequence of `cookies` limited to the overall size `cookies-max-byte-size`."
   [cookies cookies-max-byte-size]
   (loop [[cookie & cookies] cookies res [] total-size 0]
     (if (nil? cookie) res
@@ -124,10 +140,40 @@
             (recur cookies (conj res cookie) total-size)
             res)))))
 
+(defn fetching-thread
+  "Continuously tries to take visit-states from a todo-queue and tries to fetch as many
+  resources as allowed in the keep-alive time of the runtime config. Pushes fetched
+  data to a results-queue and reusable visit states to the done queue. Visit states
+  might get purged from the workbench if they trigger too many errors.
 
-(defn fetching-thread [{:keys [connection-manager _dns-resolver results-queue workbench
-                               runtime-config todo-queue done-queue] :as thread-data}
-                       index stop-chan]
+  The 3 arguments:
+  - a `thread-data` map (see more below)
+  - a `index` integer - identifying the fetching thread
+  - a `stop-chan` as this function follows the thread-wrapper pattern (see also
+  ramper.util.thread/thread-wrapper)
+
+  The thread-data map must contain:
+
+  :connection-manager - a http connection manager from which to build a http client.
+
+  :dns-resolver - a dns resolver with which also the above connection manager was
+  intialized.
+
+  :results-queue - an atom wrapping a Clojure persistent queue to which fetched data
+  can be pushed.
+
+  :workbench - an atom wrapping the agents workbench.
+
+  :runtime-config - an atom wrapping the runtime config of the agent.
+
+  :todo-queue - an atom wrapping a Clojure persistent queue from which ready visit
+  states can be dequeued.
+
+  :done-queue - an atom wrapping a Clojure persistent queue to which finished visit
+  states can be enqueued."
+  [{:keys [connection-manager results-queue workbench
+           runtime-config todo-queue done-queue] :as thread-data}
+   index stop-chan]
   (thread-utils/set-thread-name (str *ns* "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
   ;; TODO check if cookie store should be added via HttpClientBuilder
@@ -145,7 +191,7 @@
                 (if (and (visit-state/first-path vs)
                          (<= (- start-time (System/currentTimeMillis))
                              (:ramper/keepalive-time @runtime-config)))
-                  ;; TODO does the cooking unrolling and readding need to happen here all the time
+                  ;; TODO does the cooking unrolling and readding need to happen here all the time?
                   (do
                     (cookies/clear-cookies cookie-store)
                     (run! #(cookies/add-cookie cookie-store %) (:cookies vs))
@@ -163,7 +209,7 @@
                           (recur (->>
                                   (limit-cookies (seq (.getCookies cookie-store)) cookies-max-byte-size)
                                   (visit-state/set-cookies vs ))))
-                        ;; an error occurred but the visit-state does not need to be purged
+                        ;; an error occurred, but the visit-state does not need to be purged
                         continue
                         (do
                           (swap! workbench workbench/set-entry-next-fetch (:ip-address visit-state) (+ now ip-delay))
