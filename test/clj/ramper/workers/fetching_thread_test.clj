@@ -5,6 +5,7 @@
             [clj-http.core :as core]
             [clojure.test :refer [deftest is testing]]
             [clojure.spec.alpha :as s]
+            [matcher-combinators.test]
             [ramper.workers.fetched-data :as fetched-data]
             [ramper.frontier.workbench :as workbench]
             [ramper.frontier.workbench.visit-state :as visit-state]
@@ -78,7 +79,7 @@
         (is (= java.net.UnknownHostException (:last-exception visit-state)))))))
 
 (deftest fetching-thread-test
-  (let [runtime-config (atom {:ramper/keepalive-time 1000
+  (let [runtime-config (atom {:ramper/keepalive-time 5000 ;; this test should not depend on keep alive time
                               :ramper/scheme+authority-delay 2000
                               :ramper/ip-delay 2000})
         host1 "clojure.org"
@@ -93,7 +94,7 @@
                         (assoc :ip-address host1-ip
                                :next-fetch (util/from-now -30))
                         (visit-state/enqueue-path-query "")
-                        (visit-state/enqueue-path-query "/about/rational"))
+                        (visit-state/enqueue-path-query "/about/rationale"))
         visit-state-with-400-resp (-> (visit-state/visit-state (url/scheme+authority "https://httpbin.org"))
                                       (assoc :ip-address host2-ip
                                              :next-fetch (util/from-now -20))
@@ -118,8 +119,16 @@
                      :runtime-config runtime-config :todo-queue todo-queue
                      :done-queue done-queue}
         tw (thread-util/thread-wrapper (partial fetching-thread/fetching-thread thread-data 1))]
-    ;; (Thread/sleep 2000)
-    ;; (is (true? (thread-util/stop tw)))
-    ))
-
-;; (fetching-thread-test)
+    (Thread/sleep 2000)
+    (is (true? (thread-util/stop tw)))
+    (is (empty? @todo-queue))
+    (is (= 2 (count @done-queue)))
+    (is (match? (-> visit-state
+                    (dissoc :next-fetch :path-queries :cookies))
+                (peek @done-queue)))
+    (is (match? (-> visit-state-with-400-resp
+                    (dissoc :next-fetch :path-queries :cookies))
+                (peek (pop @done-queue))))
+    (is (= 4 (count @results-queue)))
+    (is (every? #(s/valid? ::fetched-data/fetched-data %) @results-queue))
+    (is (match? [200 200 400 200] (map #(-> % :response :status) @results-queue)))))

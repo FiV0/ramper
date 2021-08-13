@@ -95,7 +95,7 @@
               [nil visit-state true]))))
       ;; bad exception case
       (catch Exception should-not-happen
-        (log/error :unexpected-ex (Throwable->map should-not-happen))
+        (log/error :unexpected-ex {:ex should-not-happen})
         ;; we return the visit-state as is, but with no exception set
         ;; this really should not happen
         (let [now (System/currentTimeMillis)
@@ -142,7 +142,7 @@
                         fetched-data
                         (do
                           (s/assert ::fetched-data/fetched-data fetched-data)
-                          (swap! results-queue conj fetch-data)
+                          (swap! results-queue conj fetched-data)
                           (recur (visit-state/set-cookies vs (seq (.getCookies cookie-store)))))
                         ;; an error occurred but the visit-state does not need to be purged
                         continue
@@ -152,16 +152,18 @@
                         ;; we are purging the visit state
                         :else
                         (do
-                          (swap! workbench workbench/purge-visit-state vs)
-                          (swap! workbench workbench/set-entry-next-fetch (:ip-address visit-state) (+ now ip-delay))))))
-                  (swap! done-queue conj vs))))
+                          ;; order is important here, as the workbench entry might also get removed if empty
+                          (swap! workbench workbench/set-entry-next-fetch (:ip-address visit-state) (+ now ip-delay))
+                          (swap! workbench workbench/purge-visit-state vs)))))
+                  (swap! done-queue conj vs)))
+              (recur 0 wait-time))
             (let [time (bit-shift-left 1 (max 10 i))]
               (Thread/sleep time)
               ;; TODO add frontier growing here
               (log/info :fetching-thread {:sleep-time time})
               (recur (inc i) (+ wait-time time))))))
       (catch Throwable t
-        (log/error :unexpected-ex (Throwable->map t)))))
+        (log/error :unexpected-ex {:ex t}))))
   (log/info :graceful-shutdown {:type :fetching-thread
                                 :index index})
   true)
