@@ -9,6 +9,7 @@
                                         clojure.string str
                                         datomic.api datomic
                                         io.pedestal.log log}}
-           :unresolved-symbol {:exclude [(clojure.core.match/match)]}
+           :unresolved-symbol {:exclude [(clojure.core.match/match)
+                                         (clojure.test/is [match?])]}
            :unused-namespace {:exclude [io.pedestal.log]}}
  :hooks {:analyze-call {ramper.util.macros/cond-let hooks.cond-let/cond-let}}}
