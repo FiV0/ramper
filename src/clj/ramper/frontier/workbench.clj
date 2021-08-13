@@ -104,7 +104,7 @@
 
 (defn set-entry-next-fetch
   "Sets the next-fetch time of workbench entry."
-  [^Workbench {:keys [address-to-entry address-to-busy-entry] :as _workbench}
+  [^Workbench {:keys [address-to-entry address-to-busy-entry] :as workbench}
    ^bytes ip-address next-fetch]
   {:pre [(= 4 (count ip-address))]}
   (let [ip-hash (hash-ip ip-address)]
@@ -114,7 +114,7 @@
               ;; here we assume old-wb-entry is not in entries
               (update workbench :address-to-busy-entry assoc ip-hash (assoc old-wb-entry :next-fetch next-fetch))
               :else
-              (throw (IllegalStateException. (str "ip address: " (util/ip-address->str ip-address) "not in workbench!!!"))))))
+              (throw (IllegalStateException. (str "ip address: " (util/ip-address->str ip-address) " not in workbench!!!"))))))
 
 (defn scheme+authority-present?
   "Returns true when there exists an active visit-state for the schem+authority."
