@@ -2,6 +2,8 @@
   (:require [clojure.spec.alpha :as s]
             [ramper.util.url :as url]))
 
+;; TODO make fetched-data adaptable in the config
+
 (s/def ::response (s/keys :req-un [::headers
                                    ::status
                                    ::body]
@@ -11,7 +13,6 @@
 
 (s/def ::fetched-data (s/keys :req-un [::response
                                        ::url]))
-
 
 (comment
   (require '[lambdacisland.uri :as uri])

@@ -11,6 +11,7 @@
 ;; TODO: maybe choose a different name than record. It's already overloaded in Clojure.
 (defrecord SimpleRecord [url response])
 
+;; TODO unify with fetched-data
 (s/def :store/record (s/keys :req-un [::headers ::status ::body]))
 
 (defn simple-record

@@ -1,13 +1,13 @@
 (ns ramper.util.lru-immutable
   "A thin wrapper around `clojure.core.cached`"
   (:require [clojure.core.cache.wrapped :as cw]
-            [ramper.util.lru :as lru :refer [Cache add check]]))
+            [ramper.util.lru :as lru :refer [Cache]]))
 
 (deftype LruCacheImmutable [cache hash-fn]
   Cache
-  (add [this item]
+  (add [_this item]
     (cw/through-cache cache (hash-fn item) (constantly true)))
-  (check [this item]
+  (check [_this item]
     (cw/lookup cache (hash-fn item))))
 
 (defn create-lru-cache

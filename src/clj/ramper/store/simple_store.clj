@@ -16,11 +16,11 @@
 
 (deftype SimpleStore [output-stream serializer lock]
   Closeable
-  (close [this]
+  (close [_this]
     (.close output-stream))
 
   Store
-  (store [this url response]
+  (store [_this url response]
     (io!
      (locking lock
        (to-stream serializer output-stream (simple-record/simple-record url response))))))
@@ -51,11 +51,11 @@
 
 (deftype SimpleStoreReader [input-stream serializer lock]
   Closeable
-  (close [this]
+  (close [_this]
     (.close input-stream))
 
   StoreReader
-  (read [this]
+  (read [_this]
     (io!
      (locking lock
        (when (pos? (.available input-stream))
