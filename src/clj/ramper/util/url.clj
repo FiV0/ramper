@@ -66,12 +66,6 @@
   [uri-like]
   (instance? URI uri-like))
 
-(defn relative?
-  "Returns true if `uri-like` is a relative uri."
-  [uri-like]
-  (let [uri (uri/uri uri-like)]
-    (and (nil? (:scheme uri)) (nil? (:host uri)))))
-
 (defn make-absolute
   "Given a `parent` uri and a (probably relative) `child` uri, returns the
   absolute child uri.`"

@@ -119,7 +119,7 @@
 
 (defn extract-relative [html parent-url]
   (->> (extract/html->links :jericho html)
-       (filter url/relative?)
+       (filter uri/relative?)
        (map #(url/make-absolute parent-url %))))
 
 ;; keepalive testing
