@@ -39,8 +39,10 @@
                                              (fn [x] (-> x hash long)))
         url-cache (lru/create-lru-cache [html-url bytes-url links-url] 100 url/hash-url)
         runtime-config (atom {:ramper/max-urls-per-scheme+authority 10})
+        scheme+authority-to-count (atom {})
         thread-data {:store store :sieve sieve :url-cache url-cache
-                     :scheme+authority-to-count (atom {}) :runtime-config runtime-config}]
+                     :scheme+authority-to-count  scheme+authority-to-count
+                     :runtime-config runtime-config}]
     (testing "with httpbin.org"
       (is (true? (s/valid? ::fetched-data/fetched-data html-fetched-data)))
       (is (true? (s/valid? ::fetched-data/fetched-data bytes-fetched-data)))
@@ -50,7 +52,10 @@
       (is (match? (simple-record/simple-record html-url (select-response-keys html-response))
                   (store/read store-reader)))
       (is (match? (simple-record/simple-record bytes-url (select-response-keys bytes-response))
-                  (store/read store-reader))))
+                  (store/read store-reader)))
+      (is (= 1 (count @scheme+authority-to-count)))
+      ;; two for httpbin.org
+      (is (= #{2} (set (vals @scheme+authority-to-count)))))
     (let [store (simple-store/simple-store store-dir false)
           thread-data (assoc thread-data :store store)]
       (testing "with finnvolkel.com and links"
@@ -67,6 +72,9 @@
                  "https://finnvolkel.com/archive/"
                  "https://nextjournal.com/")
                (repeatedly 4 #(receiver/dequeue-key receiver))))
+        (is (= 2 (count @scheme+authority-to-count)))
+        ;; two for httpbin.org, 1 finnvolkel.com
+        (is (= #{1 2} (set (vals @scheme+authority-to-count))))
         (.close store-reader)))))
 
 (deftest parsing-thread-test
@@ -92,9 +100,10 @@
                                   [html-fetched-data
                                    bytes-fetched-data
                                    links-fetched-data]))
+        scheme+authority-to-count (atom {})
         thread-data {:store store :sieve sieve :url-cache url-cache
-                     :results-queue results-queue
-                     :scheme+authority-to-count (atom {}) :runtime-config runtime-config}
+                     :results-queue results-queue :runtime-config runtime-config
+                     :scheme+authority-to-count scheme+authority-to-count}
         tw (thread-util/thread-wrapper (partial parsing-thread/parsing-thread thread-data 1))]
     (testing "parsing-thread"
       (Thread/sleep 1000)
@@ -114,6 +123,8 @@
                "https://finnvolkel.com/archive/"
                "https://nextjournal.com/")
              (repeatedly 4 #(receiver/dequeue-key receiver))))
+      (is (= 2 (count @scheme+authority-to-count)))
+      (is (= #{1 2} (set (vals @scheme+authority-to-count))))
       (.close store-reader))))
 
 (comment

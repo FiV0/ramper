@@ -54,6 +54,7 @@
   "The virtualizer for the workbench."
   (atom (workbench-virtualizer-init)))
 
+;; TODO add init urls to cache
 (def url-cache
   "An url cache for the urls seen recently. This avoids overloading the sieve and
   catches (apparently) already 90% of duplicates."

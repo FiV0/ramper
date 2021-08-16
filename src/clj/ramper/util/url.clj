@@ -12,8 +12,7 @@
   "Returns only the scheme + authority of an uri-like object as
   an URI."
   [uri-like]
-  (let [{:keys [scheme host]} (uri/uri uri-like)]
-    (assoc (uri/uri "") :scheme scheme :host host)))
+  (select-keys (uri/uri uri-like) [:scheme :host]))
 
 (def scheme+authority base)
 

@@ -42,6 +42,7 @@
                  (log/warn :io-exception {:url url
                                           :exception-type (type e)})))]
     (when response
+      (swap! scheme+authority-to-count update (url/scheme+authority url) (fnil inc 0))
       (store/store store url response))
     (doseq [url urls]
       (when-not (lru/check url-cache url)
