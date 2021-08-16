@@ -15,8 +15,6 @@
             [ramper.workers.fetching-thread :as fetching-thread])
   (:import (org.xbill.DNS Address)))
 
-(require '[io.pedestal.log :as log])
-
 (deftest fetch-data-test
   (let [ip-address (.getAddress (Address/getByName "httpbin.org"))
         runtime-config (atom {:ramper/scheme+authority-delay 2000})

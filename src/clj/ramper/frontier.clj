@@ -7,10 +7,13 @@
             [ramper.runtime-configuration :as runtime-config]
             [ramper.sieve.disk-flow-receiver :as receiver]
             [ramper.sieve.mercator-sieve :as mercator-sieve]
+            [ramper.store.parallel-buffered-store :as store]
             [ramper.util.data-disk-queues :as ddq]
             [ramper.util.delay-queue :as delay-queue]
             [ramper.util.lru-immutable :as lru]
             [ramper.util.url :as url]))
+
+;; TODO maybe make init functions configurable by runtime-config passing
 
 (defn- frontier-subdir [name]
   (io/file (:ramper/frontier-dir @runtime-config/runtime-config) name))
@@ -93,6 +96,17 @@
   "An url sieve implementing `ramper.sieve.Sieve`."
   (atom (sieve-init)))
 
+(defn- store-init []
+  (store/parallel-buffered-store
+   (:ramper/store-dir @runtime-config/runtime-config)
+   (:ramper/is-new @runtime-config/runtime-config)
+   (:ramper/store-buffer-size @runtime-config/runtime-config)))
+
+(def store
+  "A response store that must implement ramper.store/Store and probably should implement
+  ramper.store/StoreReader."
+  (atom (store-init)))
+
 (defn- data-disk-queues-init [name]
   (ddq/data-disk-queues (io/file (:ramper/frontier-dir @runtime-config/runtime-config) name)))
 
@@ -141,6 +155,7 @@
   (reset! new-visit-states clojure.lang.PersistentQueue/EMPTY)
   (reset! ready-urls (url-flow-receiver-init))
   (reset! sieve (sieve-init))
+  (reset! store (store-init))
   (reset! received-urls (data-disk-queues-init "received"))
   (reset! path-queries-in-queues 0)
   (reset! weight-of-path-queries 0)

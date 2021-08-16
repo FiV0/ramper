@@ -1,6 +1,7 @@
 (ns ramper.util
   "General utility functions for ramper."
-  (:require [clojure.string :as str])
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str])
   (:import (java.io InputStream OutputStream)
            (java.nio.file Files)
            (it.unimi.dsi.bits Fast)
@@ -132,3 +133,8 @@
   "Returns a timestamp `millis` milliseconds from now."
   [millis]
   (+ (System/currentTimeMillis) millis))
+
+(defn project-dir
+  "Returns the directory from which the JVM was started."
+  []
+  (io/file (System/getProperty "user.dir")))
