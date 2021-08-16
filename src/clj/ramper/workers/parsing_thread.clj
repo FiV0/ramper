@@ -59,7 +59,9 @@
     (loop [i 0]
       (when-not (async/poll! stop-chan)
         (if-let [fetched-data (pq/dequeue! results-queue)]
-          (parse-fetched-data (assoc thread-data :fetched-data fetched-data))
+          ;; TODO should this be stopped in case of some error?
+          (do (parse-fetched-data (assoc thread-data :fetched-data fetched-data))
+              (recur 0))
           (let [time (bit-shift-left 1 (max 10 i))]
             (Thread/sleep time)
             (log/info :fetching-thread {:sleep-time time})
