@@ -28,11 +28,13 @@
 ;; into a new module. See LinkReceiver in BUBing.
 ;; TODO once we do digest computation the parsing should also be done only once the
 ;; parsing logic probably be moved into a seperate module
-(defn parse-fetched-data [{:keys [fetched-data store sieve
-                                  url-cache scheme+authority-to-count runtime-config] :as _parsing-thread-data}]
+(defn parse-fetched-data [{:keys [fetched-data store sieve url-cache
+                                  scheme+authority-to-count runtime-config] :as _parsing-thread-data}]
   (let [{:keys [response url]} fetched-data
+        ;; TODO add parsers here
+        ;; TODO don't parse if not html
         urls (try
-               (->> response :body extraction/html->links
+               (->> response :body (extraction/html->links :jericho)
                     (map #(uri/join url (uri/uri %))))
                (catch BufferOverflowException _e
                  (log/warn :buffer-overflow {:url url}))
@@ -46,7 +48,7 @@
         (lru/add url-cache url)
         (let [scheme+authority (url/scheme+authority url)]
           (when (< (get @scheme+authority-to-count scheme+authority 0)
-                   =(:ramper/max-urls-per-scheme+authority @runtime-config))
+                   (:ramper/max-urls-per-scheme+authority @runtime-config))
             (sieve/enqueue sieve (str url))))))))
 
 (defn parsing-thread [{:keys [_store _sieve _url-cache _scheme+authority-to-count results-queue] :as thread-data}

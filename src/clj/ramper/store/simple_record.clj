@@ -9,6 +9,7 @@
   (:import [lambdaisland.uri URI]))
 
 ;; TODO: maybe choose a different name than record. It's already overloaded in Clojure.
+;; TODO: adapt this so keys are modifiable by config
 (defrecord SimpleRecord [url response])
 
 ;; TODO unify with fetched-data
