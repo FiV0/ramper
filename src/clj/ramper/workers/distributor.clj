@@ -22,10 +22,48 @@
 
 (def front-too-small-loop-size 100)
 
-;; no need for a stop channel as there is only one distributor
+(defn enlarge-front [{:keys [workbench virtualizer runtime-config scheme+authority-to-count
+                             ready-urls new-visit-states] :as _thread-data} stats]
+  (loop [cnt 0 stats stats scheme+authority-to-new-visit-states {}]
+    (if (and (< cnt front-too-small-loop-size)
+             (pos? (flow-receiver/size @ready-urls)))
+      (let [url (flow-receiver/dequeue-key @ready-urls)
+            scheme+authority (url/scheme+authority url)]
+        (cond-let
+         ;; url gets dropped
+         (not (< (get @scheme+authority-to-count scheme+authority 0)
+                 (:ramper/max-urls-per-scheme+authority @runtime-config)))
+         (recur (inc cnt)
+                (update stats :deleted-from-sieve inc)
+                scheme+authority-to-new-visit-states)
+
+         ;; scheme+authority already has a visit-state
+         (workbench/scheme+authority-present? @workbench scheme+authority)
+         ;; TODO make the virtualizer interface better
+         ;; this is unnecessary
+         ;; TODO don't go through disk here when possible
+         (let [dummy-visit-state (visit-state/visit-state scheme+authority)]
+           (virtual/enqueue virtualizer dummy-visit-state url)
+           (recur (inc cnt)
+                  (update stats :from-sieve-to-virtualizer inc)
+                  scheme+authority-to-new-visit-states))
+
+         ;; we create or update a new visit-state
+         :else
+         (recur (inc cnt)
+                (update stats :from-sieve-to-workbench inc)
+                (update scheme+authority-to-new-visit-states
+                        scheme+authority
+                        (fnil #(visit-state/enqueue-path-query % (str (url/path+queries url)))
+                              (visit-state/visit-state scheme+authority))))))
+      (do
+        (swap! new-visit-states #(into % (vals scheme+authority-to-new-visit-states)))
+        stats))))
+
 (defn distributor-thread [{:keys [workbench todo-queue refill-queue required-front-size
                                   virtualizer sieve runtime-config ready-urls
-                                  scheme+authority-to-count new-visit-states] :as _thread-data}]
+                                  _scheme+authority-to-count _new-visit-states
+                                  path-queries-in-queues] :as thread-data}]
   (thread-utils/set-thread-name (str *ns*))
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
@@ -39,7 +77,7 @@
                           :from-sieve-to-workbench   0
                           :deleted-from-sieve        0}]
       (when-not (runtime-config/stop? @runtime-config)
-        (let [workbench-full (frontier/workbench-full?)
+        (let [workbench-full (frontier/workbench-full? @runtime-config path-queries-in-queues)
               front-too-small (front-too-small? @workbench @todo-queue @required-front-size)
               now (System/currentTimeMillis)]
           ;; TODO try to refactor this in one big cond
@@ -68,43 +106,7 @@
                               (recur 0 stats))
 
                             (and front-too-small (pos? (flow-receiver/size @ready-urls)))
-                            (let [new-stats  (loop [cnt 0 stats stats scheme+authority-to-new-visit-states {}]
-                                               (if (and (< cnt front-too-small-loop-size)
-                                                        (pos? (flow-receiver/size @ready-urls)))
-                                                 (let [url (flow-receiver/dequeue-key @ready-urls)
-                                                       scheme+authority (url/scheme+authority url)]
-                                                   (cond-let
-                                                    ;; url gets dropped
-                                                    (not (< (get @scheme+authority-to-count scheme+authority 0)
-                                                            (:ramper/max-urls-per-scheme+authority @runtime-config)))
-                                                    (recur (inc cnt)
-                                                           (update stats :deleted-from-sieve inc)
-                                                           scheme+authority-to-new-visit-states)
-
-                                                    ;; scheme+authority already has a visit-state
-                                                    (workbench/scheme+authority-present? @workbench scheme+authority)
-                                                    ;; TODO make the virtualizer interface better
-                                                    ;; this is unnecessary
-                                                    ;; TODO don't go through disk here when possible
-                                                    (let [dummy-visit-state (visit-state/visit-state scheme+authority)]
-                                                      (virtual/enqueue virtualizer dummy-visit-state url)
-                                                      (recur (inc cnt)
-                                                             (update stats :from-sieve-to-virtualizer inc)
-                                                             scheme+authority-to-new-visit-states))
-
-                                                    ;; we create or update a new visit-state
-                                                    :else
-                                                    (recur (inc cnt)
-                                                           (update stats :from-sieve-to-workbench inc)
-                                                           (update scheme+authority-to-new-visit-states
-                                                                   scheme+authority
-                                                                   (fnil #(visit-state/enqueue-path-query virtualizer % url)
-                                                                         (visit-state/visit-state scheme+authority))))))
-                                                 (do
-                                                   (swap! new-visit-states #(into % (vals scheme+authority-to-new-visit-states)))
-                                                   stats))
-                                               )]
-                              (recur 0 new-stats))
+                            (recur 0 (enlarge-front thread-data stats))
 
                             :else
                             (recur 0 stats)))
