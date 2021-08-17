@@ -15,4 +15,11 @@ TODO: explain tools.build options
 The `pom.xml` at the root of the repo currently only serves for easier Java development
 in combination with IDEs that support Maven integration.
 
+### Testing
+
+The tests can be run with
+```bash
+#> clojure -M:test -m cognitect.test-runner
+```
+
 ## License

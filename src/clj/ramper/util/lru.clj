@@ -1,7 +1,8 @@
 (ns ramper.util.lru
   "A LRU cache implementation using MurmurHash3 128 bit implementation.
 
-  IMPORTANT!!! This is broken and should not be used."
+  IMPORTANT!!! This is broken and should not be used except for the Cache
+  protocol definition."
   (:require [ramper.util :as util])
   (:import (org.apache.commons.codec.digest MurmurHash3)
            (java.util.concurrent ConcurrentHashMap)

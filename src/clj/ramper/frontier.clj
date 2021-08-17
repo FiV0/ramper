@@ -78,7 +78,7 @@
 (def ready-urls
   " A (probably disk-based) queue to store urls coming out of the sieve.
 
-  Should implement `ramper.sieve.FlowReceiver` as well as (for now)
+  Should implement `ramper.sieve.flow-receiver.FlowReceiver` as well as (for now)
   `ramper.sieve.disk-flow-receiver.DiskFlowReceiverDequeue`"
   (atom (url-flow-receiver-init)))
 

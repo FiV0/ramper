@@ -1,11 +1,11 @@
 (ns ramper.sieve.mercator-sieve
   (:refer-clojure :exclude [flush])
   (:require [io.pedestal.log :as log]
-            [ramper.sieve :refer [FlowReceiver prepare-to-append append finish-appending
-                                  Sieve enqueue flush
+            [ramper.sieve :refer [Sieve flush
                                   Size number-of-items]
              :as sieve]
             [ramper.sieve.bucket :as bucket-api]
+            [ramper.sieve.flow-receiver :refer [prepare-to-append append finish-appending]]
             [ramper.sieve.store :as store-api])
   (:import (it.unimi.dsi.fastutil.ints IntArrays)
            (it.unimi.dsi.fastutil.longs LongArrays)))
