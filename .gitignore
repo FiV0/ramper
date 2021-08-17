@@ -10,6 +10,7 @@ node_modules/
 .DS_Store
 resources/public/ui
 .store
+store/
 out
 .#*
 .clj-kondo/.cache
