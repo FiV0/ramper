@@ -28,8 +28,17 @@
 ;; into a new module. See LinkReceiver in BUBing.
 ;; TODO once we do digest computation the parsing should also be done only once the
 ;; parsing logic probably be moved into a seperate module
-(defn parse-fetched-data [{:keys [fetched-data store sieve url-cache
-                                  scheme+authority-to-count runtime-config] :as _parsing-thread-data}]
+(defn parse-fetched-data
+  "A function that parses fetched-data, extracts new urls and decides if the response
+  should be stored.
+
+  The given parsing-thread data map must contain:
+
+  :fetched-data - a response satisfying the spec :r.workers.fetched-data/fetched-data
+
+  For the remaining keys see r.workers.parsing-thread/parsing-thread."
+  [{:keys [fetched-data store sieve url-cache
+           scheme+authority-to-count runtime-config] :as _parsing-thread-data}]
   (let [{:keys [response url]} fetched-data
         ;; TODO add parsers here
         ;; TODO don't parse if not html
@@ -52,8 +61,32 @@
                    (:ramper/max-urls-per-scheme+authority @runtime-config))
             (sieve/enqueue sieve (str url))))))))
 
-(defn parsing-thread [{:keys [_store _sieve _url-cache _scheme+authority-to-count results-queue] :as thread-data}
-                      index stop-chan]
+(defn parsing-thread
+  "Continuously dequeues fetched data from the results-queue and tries to parse
+  and store the results. Potentially enqueuing new found url to the sieve.
+
+  The 3 arguments:
+  - a `thread-data` map (see more below)
+  - a `index` integer - identifying the parsing thread
+  - a `stop-chan` as this function follows the thread-wrapper pattern (see also
+  ramper.util.thread/thread-wrapper)
+
+  The thread-data map must contain:
+
+  :store - a store to store the responses
+
+  :sieve - a sieve satisfying r.sieve/Sieve
+
+  :url-cache - an url cache satisfying r.util.lru/Cache
+
+  :scheme+authority - an atom wrapping a standard map. The map contains a mapping
+  from scheme+authority to an integer, counting the number of urls that were processed
+  and stored for the corresponding scheme+authority.
+
+  :results-queue - an atom wrapping clojure.lang.PersistentQueue from which
+  the fetched-data will be dequeued."
+  [{:keys [_store _sieve _url-cache _scheme+authority-to-count results-queue] :as thread-data}
+   index stop-chan]
   (thread-utils/set-thread-name (str *ns* "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
   (try
