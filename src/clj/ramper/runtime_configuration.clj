@@ -25,7 +25,9 @@
                            :ramper/scheme+authority-delay 2000 ;2 seconds
                            :ramper/frontier-dir (io/file root-dir "frontier")
                            :ramper/max-urls-per-scheme+authority 500
-                           :ramper/store-dir (io/file (util/project-dir) "store")
+                           ;; TODO for now, as otherwise stuff fails on CircleCI
+                           :ramper/store-dir #_(io/file (util/project-dir) "store")
+                           (util/temp-dir "store")
                            :ramper/is-new true}))
 
 (defn workbench-size-in-path-queries
