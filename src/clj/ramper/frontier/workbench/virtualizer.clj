@@ -39,7 +39,7 @@
   (->WorkbenchVirtualizer (ByteArrayDiskQueues. dir) dir))
 
 (defn- visit-state-key [^VisitState visit-state]
-  (:scheme+authority visit-state))
+  (-> (:scheme+authority visit-state) str hash))
 
 (defn dequeue-path-queries
   "Dequeues a maximum number of `max-urls` of path+queries from the

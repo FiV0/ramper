@@ -7,12 +7,12 @@
             [ramper.util.url-factory :as url-factory]))
 
 (deftest simple-virtualizer-test
-  (testing "virtualizer single-threaded with 2 scheme+authority pairs"
-    (let [virtual (virtualizer/workbench-virtualizer (util/temp-dir "virtualizer"))
-          sa1 (-> (url-factory/rand-scheme+authority-seq 1000) distinct)
-          sa2 (->> (url-factory/rand-scheme+authority-seq 1000) (take (count sa1)))
-          vs1 (vs/visit-state (-> sa1 first url/base str))
-          vs2 (vs/visit-state (-> sa2 first url/base str))]
+  (let [virtual (virtualizer/workbench-virtualizer (util/temp-dir "virtualizer"))
+        sa1 (-> (url-factory/rand-scheme+authority-seq 10) distinct)
+        sa2 (->> (url-factory/rand-scheme+authority-seq 10) (take (count sa1)))
+        vs1 (vs/visit-state (-> sa1 first url/base str))
+        vs2 (vs/visit-state (-> sa2 first url/base str))]
+    (testing "virtualizer single-threaded with 2 scheme+authority pairs"
       (loop [sa1 sa1 sa2 sa2]
         (when (seq sa1)
           (virtualizer/enqueue virtual vs1 (first sa1))
@@ -28,4 +28,12 @@
             (is (= (map #(-> % url/path+queries str) sa1)
                    (-> vs1 :path-queries seq)))
             (is (= (map #(-> % url/path+queries str) sa2)
-                   (-> vs2 :path-queries seq)))))))))
+                   (-> vs2 :path-queries seq)))))))
+    (testing "virtualizer object equality"
+      ;; here we explicitly create the visit state twice
+      (virtualizer/enqueue virtual (vs/visit-state (url/scheme+authority "https://httpbin.org")) "https://httpbin.org/get")
+      (let [new-visit-state (virtualizer/dequeue-path-queries
+                             virtual
+                             (vs/visit-state (url/scheme+authority "https://httpbin.org"))
+                             1)]
+        (is (= "/get" (vs/first-path new-visit-state)))))))

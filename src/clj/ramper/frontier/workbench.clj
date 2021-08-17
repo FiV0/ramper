@@ -137,7 +137,9 @@
         (update :address-to-busy-entry assoc ip-hash new-wb-entry))))
 
 (defn add-visit-state
-  "Adds a new `visit-state` to `workbench`, creating a new workbench-entry if necessary."
+  "Adds a `visit-state` to `workbench`, creating a new workbench-entry if necessary.
+  The visit-state might be a new visit-state or an old one that has passed through the
+  workbench."
   [^Workbench {:keys [address-to-entry address-to-busy-entry] :as workbench}
    ^VisitState {:keys [ip-address locked-entry scheme+authority] :as visit-state}]
   {:pre [(contains? visit-state :ip-address)]}

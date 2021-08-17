@@ -12,6 +12,12 @@ Currently the [dll](https://github.com/FiV0/dll.git) repository also needs to be
 
 TODO: explain tools.build options
 
+When developing you need to build the java files once before jacking in.
+
+```bash
+#> clojure -T:build java
+```
+
 The `pom.xml` at the root of the repo currently only serves for easier Java development
 in combination with IDEs that support Maven integration.
 

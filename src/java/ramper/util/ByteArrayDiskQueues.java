@@ -1,5 +1,15 @@
 package ramper.util;
 
+import java.io.Closeable;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.io.Serializable;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel.MapMode;
+import java.util.NoSuchElementException;
+
 /*
  * Copyright (C) 2012-2017 Paolo Boldi, Massimo Santini, and Sebastiano Vigna
  *
@@ -23,24 +33,14 @@ import it.unimi.dsi.fastutil.Size64;
 import it.unimi.dsi.fastutil.longs.LongHeapSemiIndirectPriorityQueue;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
-import it.unimi.dsi.fastutil.objects.Reference2ObjectMap;
-import it.unimi.dsi.fastutil.objects.Reference2ObjectOpenHashMap;
-
-import java.io.Closeable;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel.MapMode;
-import java.util.NoSuchElementException;
+import it.unimi.dsi.fastutil.objects.Object2ObjectMap;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 //RELEASE-STATUS: DIST
 
 /** A set of memory-mapped queues of byte arrays.
  *
- * <p>An instance of this class handles a database of FIFO queues. Each queue is associated with a key (which is looked up by {@linkplain Reference2ObjectMap reference},
+ * <p>An instance of this class handles a database of FIFO queues. Each queue is associated with a key (which is looked up by {@linkplain Object2ObjectMap reference},
  * for efficiency). Users can {@linkplain #enqueue(Object, byte[], int, int) enqueue}
  * and {@linkplain #dequeue(Object) dequeue} elements associated with a key in FIFO order. It is also possible
  * to {@linkplain #remove(Object) remove all} elements associated with a key.
@@ -90,7 +90,7 @@ public class ByteArrayDiskQueues implements Closeable, Size64 {
      * {@link #log2LogFileSize} bits and a log-file index in the remainig upper bits. */
     protected final int logFilePositionMask;
     /** For each key, the associated {@link QueueData}. If a key is present, there is at least one associated element in the queue. */
-    public final Reference2ObjectOpenHashMap<Object,QueueData> key2QueueData;
+    public final Object2ObjectOpenHashMap<Object,QueueData> key2QueueData;
     /** For each log-file index, the associated {@link RandomAccessFile}. An entry might be {@code null} if the log file has been deleted or it has not been opened yet. */
     public final ObjectArrayList<RandomAccessFile> files;
     /** For each log-file index, the associated {@link ByteBuffer}. An entry might be {@code null} if the log file has been deleted or it has not been opened yet. */
@@ -130,7 +130,7 @@ public class ByteArrayDiskQueues implements Closeable, Size64 {
         this.log2LogFileSize =log2LogFileSize;
         logFileSize = 1 << log2LogFileSize;
         logFilePositionMask = (1 << log2LogFileSize) - 1;
-        key2QueueData = new Reference2ObjectOpenHashMap<>();
+        key2QueueData = new Object2ObjectOpenHashMap<>();
         files = new ObjectArrayList<>();
         buffers = new ObjectArrayList<>();
     }
@@ -423,9 +423,9 @@ public class ByteArrayDiskQueues implements Closeable, Size64 {
         final long[] previousPointer = new long[n];
         final int[] array = new int[n];
         // Dump the metadata map into an array of keys and a parallel key of head pointers.
-        ObjectIterator<Reference2ObjectMap.Entry<Object, QueueData>> fastIterator = key2QueueData.reference2ObjectEntrySet().fastIterator();
+        ObjectIterator<Object2ObjectMap.Entry<Object, QueueData>> fastIterator = key2QueueData.object2ObjectEntrySet().fastIterator();
         for(int i = n; i-- != 0;) {
-            Reference2ObjectMap.Entry<Object, QueueData> e = fastIterator.next();
+            Object2ObjectMap.Entry<Object, QueueData> e = fastIterator.next();
             key[i] = e.getKey();
             previousPointer[i] = currentPointer[i] = e.getValue().head;
             array[i] = i;
