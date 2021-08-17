@@ -165,6 +165,7 @@
 
 (defn workbench-full?
   "Returns true if the workbench is considered full."
-  []
-  #_(<= (:ramper/workbench-max-byte-size @runtime-config/runtime-config) @weight-of-path-queries)
-  (<= (runtime-config/workbench-size-in-path-queries) @path-queries-in-queues))
+  ([] (workbench-full? @runtime-config/runtime-config @path-queries-in-queues))
+  ([runtime-config path-queries-in-queues]
+   #_(<= (:ramper/workbench-max-byte-size @runtime-config/runtime-config) @weight-of-path-queries)
+   (<= (runtime-config/workbench-size-in-path-queries runtime-config) path-queries-in-queues)))

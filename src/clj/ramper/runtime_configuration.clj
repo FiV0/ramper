@@ -30,8 +30,8 @@
 
 (defn workbench-size-in-path-queries
   "An estimation of how many path queries should reside in memory."
-  []
-  (/ (:ramper/workbench-max-byte-size @runtime-config) 100))
+  ([] (workbench-size-in-path-queries @runtime-config))
+  ([runtime-config] (/ (:ramper/workbench-max-byte-size runtime-config) 100)))
 
 (defn stop?
   "Returns true when the agent should stop."
@@ -41,14 +41,21 @@
 (defn approximate-url-cache-threshold
   "Returns the approximate size for the url cache based on
   `:ramper/url-cache-max-byte-size`."
-  []
-  ;; We store 2 longs per url times an estimator of the memory footprint per long
-  (/ (:ramper/url-cache-max-byte-size @runtime-config) (* 16 4)))
+  ([] (approximate-url-cache-threshold @runtime-config))
+  ([runtime-config]
+   ;; We store 2 longs per url times an estimator of the memory footprint per long
+   (/ (:ramper/url-cache-max-byte-size runtime-config) (* 16 4))))
 
 (defn sieve-dir
   "Returns the sieve directory based on the current runtime-config."
-  []
-  (let [sieve-dir (io/file (:ramper/root-dir @runtime-config) "sieve")]
-    (when-not (.exists sieve-dir)
-      (.mkdirs sieve-dir))
-    sieve-dir))
+  ([] (sieve-dir @runtime-config))
+  ([runtime-config]
+   (let [sieve-dir (io/file (:ramper/root-dir runtime-config) "sieve")]
+     (when-not (.exists sieve-dir)
+       (.mkdirs sieve-dir))
+     sieve-dir)))
+
+(comment
+  (.mkdirs (io/file (util/project-dir) "store"))
+  (.getCanonicalPath (io/file (util/project-dir) "store"))
+  )
