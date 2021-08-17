@@ -15,7 +15,7 @@
           urls1(-> (url-factory/rand-scheme+authority-seq nb-items) distinct)
           urls2 (->> (url-factory/rand-scheme+authority-seq nb-items) distinct (take (count urls1)))
           key1 (-> urls1 first scheme+authority-key)
-          key2 (-> urls1 first scheme+authority-key)]
+          key2 (-> urls2 first scheme+authority-key)]
       (loop [urls1 urls1 urls2 urls2]
         (when (seq urls1)
           (ddq/enqueue ddq key1 (first urls1))
