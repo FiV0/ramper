@@ -26,8 +26,8 @@
                              ready-urls new-visit-states] :as _thread-data} stats]
   (loop [cnt 0 stats stats scheme+authority-to-new-visit-states {}]
     (if (and (< cnt front-too-small-loop-size)
-             (pos? (flow-receiver/size @ready-urls)))
-      (let [url (flow-receiver/dequeue-key @ready-urls)
+             (pos? (flow-receiver/size ready-urls)))
+      (let [url (flow-receiver/dequeue-key ready-urls)
             scheme+authority (url/scheme+authority url)]
         (cond-let
          ;; url gets dropped
@@ -77,14 +77,14 @@
                           :from-sieve-to-workbench   0
                           :deleted-from-sieve        0}]
       (when-not (runtime-config/stop? @runtime-config)
-        (let [workbench-full (frontier/workbench-full? @runtime-config path-queries-in-queues)
+        (let [workbench-full (frontier/workbench-full? @runtime-config @path-queries-in-queues)
               front-too-small (front-too-small? @workbench @todo-queue @required-front-size)
               now (System/currentTimeMillis)]
           ;; TODO try to refactor this in one big cond
           (cond (not workbench-full)
                 (do
                   ;; stopping here when flushing
-                  (locking @sieve)
+                  (locking sieve)
                   (cond-let [visit-state (queue-utils/dequeue! refill-queue)]
                             (if (= 0 (virtual/count virtualizer visit-state))
                               ;; TODO check if we need a purge-visit-state
@@ -99,13 +99,13 @@
                                                                                (-> visit-state :path-queries count))))))
 
                             (and front-too-small
-                                 (zero? (flow-receiver/size @ready-urls))
-                                 (>= now (+ (sieve/last-flush @sieve) constants/min-flush-interval)))
+                                 (zero? (flow-receiver/size ready-urls))
+                                 (>= now (+ (sieve/last-flush sieve) constants/min-flush-interval)))
                             (do
-                              (sieve/flush @sieve)
+                              (sieve/flush sieve)
                               (recur 0 stats))
 
-                            (and front-too-small (pos? (flow-receiver/size @ready-urls)))
+                            (and front-too-small (pos? (flow-receiver/size ready-urls)))
                             (recur 0 (enlarge-front thread-data stats))
 
                             :else
