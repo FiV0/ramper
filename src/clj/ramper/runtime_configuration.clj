@@ -28,7 +28,8 @@
                            ;; TODO for now, as otherwise stuff fails on CircleCI
                            :ramper/store-dir #_(io/file (util/project-dir) "store")
                            (util/temp-dir "store")
-                           :ramper/is-new true}))
+                           :ramper/is-new true
+                           :ramper/init-front-size 1000}))
 
 (defn workbench-size-in-path-queries
   "An estimation of how many path queries should reside in memory."

@@ -75,6 +75,7 @@
 
 ;; TODO: Does this need to be in atom. Can the receiver not implement a reset.
 ;; TODO: Move dequeue protocol to better place.
+;; TODO: Could this not always be got from the sieve itself.
 (def ready-urls
   " A (probably disk-based) queue to store urls coming out of the sieve.
 
@@ -131,7 +132,7 @@
   "Current estimation of the size of the front in ip addresses. Adaptively
   increased by the fetching threads whenever they have to wait to retrieve
   a visit state from the todo queue."
-  (atom 0))
+  (atom (:ramper/init-front-size @runtime-config/runtime-config)))
 
 (def scheme+authority-to-count
   "A map from scheme+authority to number of urls crawled (or to be crawled) so far.
@@ -139,29 +140,30 @@
   Mainly used in the context `:ramper/max-urls-per-scheme+authority`"
   (atom {}))
 
-(defn intiailze-frontier
+(defn initiailze-frontier
   "Initializes the frontiers datastructures."
-  []
-  (reset! refill-queue clojure.lang.PersistentQueue/EMPTY)
-  (reset! done-queue clojure.lang.PersistentQueue/EMPTY)
-  (reset! todo-queue clojure.lang.PersistentQueue/EMPTY)
-  (reset! results-queue clojure.lang.PersistentQueue/EMPTY)
-  (reset! workbench (workbench/workbench))
-  (reset! workbench-virtualizer (workbench-virtualizer-init))
-  ;; TODO find a more elegent way
-  (alter-var-root #'url-cache (fn [_] (lru/create-lru-cache
-                                       (runtime-config/approximate-url-cache-threshold)
-                                       url/hash-url)))
-  (reset! unknown-hosts (delay-queue/delay-queue))
-  (reset! new-visit-states clojure.lang.PersistentQueue/EMPTY)
-  (reset! ready-urls (url-flow-receiver-init))
-  (reset! sieve (sieve-init))
-  (reset! store (store-init))
-  (reset! received-urls (data-disk-queues-init "received"))
-  (reset! path-queries-in-queues 0)
-  (reset! weight-of-path-queries 0)
-  (reset! required-front-size 0)
-  (reset! scheme+authority-to-count {}))
+  ([] (initiailze-frontier @runtime-config/runtime-config))
+  ([runtime-config]
+   (reset! refill-queue clojure.lang.PersistentQueue/EMPTY)
+   (reset! done-queue clojure.lang.PersistentQueue/EMPTY)
+   (reset! todo-queue clojure.lang.PersistentQueue/EMPTY)
+   (reset! results-queue clojure.lang.PersistentQueue/EMPTY)
+   (reset! workbench (workbench/workbench))
+   (reset! workbench-virtualizer (workbench-virtualizer-init))
+   ;; TODO find a more elegent way
+   (alter-var-root #'url-cache (fn [_] (lru/create-lru-cache
+                                        (runtime-config/approximate-url-cache-threshold)
+                                        url/hash-url)))
+   (reset! unknown-hosts (delay-queue/delay-queue))
+   (reset! new-visit-states clojure.lang.PersistentQueue/EMPTY)
+   (reset! ready-urls (url-flow-receiver-init))
+   (reset! sieve (sieve-init))
+   (reset! store (store-init))
+   (reset! received-urls (data-disk-queues-init "received"))
+   (reset! path-queries-in-queues 0)
+   (reset! weight-of-path-queries 0)
+   (reset! required-front-size (:ramper/init-front-size runtime-config))
+   (reset! scheme+authority-to-count {})))
 
 (defn workbench-full?
   "Returns true if the workbench is considered full."
