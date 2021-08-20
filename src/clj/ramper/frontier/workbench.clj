@@ -201,7 +201,7 @@
   "Calculates the number of path-queries the given `visit-state` should keep in memory."
   [^Workbench {:keys [address-to-entry address-to-busy-entry] :as _workbench}
    ^VisitState {:keys [ip-address] :as visit-state}
-   {:ramper/keys [ip-delay scheme+authority-delay] :as _runtime-config}
+   {:ramper/keys [ip-delay scheme+authority-delay] :as runtime-config}
    required-front-size]
   {:pre [(contains? visit-state :ip-address)
          (contains? (merge address-to-entry address-to-busy-entry) (hash-ip ip-address))]}
@@ -210,4 +210,5 @@
                                 (+ ip-delay 1.0)))
         scaling-factor (if (nil? workbench-entry) 1.0 (/ (we/size workbench-entry) delay-ratio))]
     (min (/ 300000 scheme+authority-delay)
-         (max 4 (math/ceil (/ (runtime-config/workbench-size-in-path-queries) (* scaling-factor required-front-size)))))))
+         (max 4 (math/ceil (/ (runtime-config/workbench-size-in-path-queries runtime-config)
+                              (* scaling-factor required-front-size)))))))

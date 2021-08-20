@@ -55,18 +55,41 @@
       (is (= 1 (virtual/on-disk virtualizer)))
       (is (= 1 (virtual/count virtualizer (visit-state/visit-state (url/scheme+authority (second urls)))))))))
 
+(defn- create-dummy-ip [s]
+  (let [ba (byte-array 4)]
+    (doall (map-indexed #(aset-byte ba %1 %2) s))
+    ba))
+
 (deftest distributor-thread-test
-  (testing "empty refill queue"
+  (testing ""
     (let [urls ["https://clojure.org/about/rationale/" ;; already to many urls
                 "https://httpbin.org/get" ;; has a corresponding visit-state
                 "https://java.com/"       ;; gets a new visit-state
                 "https://java.com/about/"]
+          dummy-ips (->> (range 4)
+                         (map #(create-dummy-ip [1 1 1 %])))
           workbench (atom (-> (workbench/workbench)
                               ;; visit-state that won't get dequeued
                               (workbench/add-visit-state
                                (assoc (visit-state/visit-state (url/scheme+authority (second urls)))
-                                      :ip-address (byte-array 4)
-                                      :next-fetch (util/from-now 100)))))
+                                      :ip-address (first dummy-ips)
+                                      :next-fetch (util/from-now 100)))
+                              ;; visit-state that will be purged
+                              (workbench/add-visit-state
+                               (-> (visit-state/visit-state (url/scheme+authority "https://foo.bar"))
+                                   (assoc :ip-address (second dummy-ips)
+                                          :next-fetch (util/from-now -3))))
+                              ;; visit-state that won't get purged, but also not refilled
+                              (workbench/add-visit-state
+                               (-> (visit-state/visit-state (url/scheme+authority "https://foo.toto"))
+                                   (visit-state/enqueue-path-query "/hello/world")
+                                   (assoc :ip-address (nth dummy-ips 2)
+                                          :next-fetch (util/from-now -2))))
+                              ;; visit-state that gets refilled
+                              (workbench/add-visit-state
+                               (-> (visit-state/visit-state (url/scheme+authority "https://bar.toto"))
+                                   (assoc :ip-address (nth dummy-ips 3)
+                                          :next-fetch (util/from-now -1))))))
           ready-urls (disk-flow-receiver/disk-flow-receiver (serializer/string-byte-serializer))
           sieve (mercator-sieve/mercator-seive true (util/temp-dir "tmp-sieve") 128 32
                                                32 ready-urls (serializer/string-byte-serializer)
@@ -75,11 +98,16 @@
               (run! #(sieve/enqueue sieve %) urls)
               (sieve/flush sieve))
           todo-queue (atom clojure.lang.PersistentQueue/EMPTY)
-          refill-queue (atom (into clojure.lang.PersistentQueue/EMPTY []))
+          refill-queue (atom (into clojure.lang.PersistentQueue/EMPTY (repeatedly 3 #(workbench/dequeue-visit-state! workbench))))
           virtualizer (virtual/workbench-virtualizer (util/temp-dir "tmp-virtualizer"))
+          ;; TODO these dummy visit state are awkward
+          _ (run! #(virtual/enqueue virtualizer (visit-state/visit-state (url/scheme+authority "https://bar.toto")) %)
+                  ["https//bar.toto/hello/world" "https//bar.toto/hello/foo"])
           runtime-config (atom {:ramper/runtime-stop false
                                 :ramper/max-urls-per-scheme+authority 3
-                                :ramper/workbench-max-byte-size (* 1024 1024)})
+                                :ramper/workbench-max-byte-size (* 1024 1024)
+                                :ramper/ip-delay 2000
+                                :ramper/scheme+authority-delay 2000})
           scheme+authority-to-count (atom {(url/scheme+authority (first urls)) 3})
           new-visit-states (atom clojure.lang.PersistentQueue/EMPTY)
           required-front-size (atom 1000)
@@ -100,4 +128,7 @@
              (:scheme+authority (peek @new-visit-states))))
       (is (= 2 (count (:path-queries (peek @new-visit-states)))))
       (is (= 1 (virtual/on-disk virtualizer)))
-      (is (= 1 (virtual/count virtualizer (visit-state/visit-state (url/scheme+authority (second urls)))))))))
+      (is (= 1 (virtual/count virtualizer (visit-state/visit-state (url/scheme+authority (second urls))))))
+      (is (= 3 (count (:address-to-entry @workbench))))
+      (is (contains? (:address-to-entry @workbench) (workbench/hash-ip (nth dummy-ips 2))))
+      (is (contains? (:address-to-entry @workbench) (workbench/hash-ip (nth dummy-ips 3)))))))
