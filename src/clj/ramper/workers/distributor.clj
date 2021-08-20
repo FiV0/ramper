@@ -20,6 +20,7 @@
          (count todo-queue))
       required-front-size))
 
+;; TODO should this be configurable
 (def front-too-small-loop-size 100)
 
 (defn enlarge-front [{:keys [workbench virtualizer runtime-config scheme+authority-to-count
@@ -86,17 +87,31 @@
                   ;; stopping here when flushing
                   (locking sieve)
                   (cond-let [visit-state (queue-utils/dequeue! refill-queue)]
-                            (if (= 0 (virtual/count virtualizer visit-state))
-                              ;; TODO check if we need a purge-visit-state
-                              (log/info :distributor/no-urls {:visit-state (dissoc visit-state :path-queries)})
-                              (let [path-query-limit (workbench/path-query-limit
-                                                      @workbench visit-state @runtime-config @required-front-size)
+                            (let [visit-state-size (visit-state/size visit-state)
+                                  virtual-empty (= 0 (virtual/count virtualizer visit-state))]
+                              (cond
+                                ;; nothing on disk and visit-state is empty
+                                (and (= 0 visit-state-size) virtual-empty)
+                                (do
+                                  (log/info :distributor/purge {:visit-state (dissoc visit-state :path-queries)})
+                                  (swap! workbench workbench/purge-visit-state visit-state)
+                                  (recur 0 stats))
+                                ;; nothing on disk but visit-state still contains urls
+                                virtual-empty
+                                (do
+                                  (log/info :distributor/no-urls {:visit-state (dissoc visit-state :path-queries)})
+                                  (swap! workbench workbench/add-visit-state visit-state)
+                                  (recur 0 stats))
+                                ;; we refill the visit state
+                                :else
+                                (let [path-query-limit (workbench/path-query-limit
+                                                        @workbench visit-state @runtime-config @required-front-size)
 
-                                    new-visit-state (virtual/dequeue-path-queries
-                                                     virtualizer visit-state path-query-limit)]
-                                ;; TODO move new-visit-state back to workbench
-                                (recur 0 (update stats :moved-from-queues + (- (-> new-visit-state :path-queries count)
-                                                                               (-> visit-state :path-queries count))))))
+                                      new-visit-state (virtual/dequeue-path-queries
+                                                       virtualizer visit-state path-query-limit)
+                                      new-visit-state-size (visit-state/size new-visit-state)]
+                                  (swap! workbench workbench/add-visit-state new-visit-state)
+                                  (recur 0 (update stats :moved-from-queues + (- new-visit-state-size visit-state-size))))))
 
                             (and front-too-small
                                  (zero? (flow-receiver/size ready-urls))
