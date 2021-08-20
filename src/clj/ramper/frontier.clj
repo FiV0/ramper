@@ -13,6 +13,8 @@
             [ramper.util.lru-immutable :as lru]
             [ramper.util.url :as url]))
 
+;; TODO maybe create a frontier that holds all the below datastructures
+;; and pass that around
 ;; TODO maybe make init functions configurable by runtime-config passing
 
 (defn- frontier-subdir [name]
