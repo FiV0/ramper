@@ -49,6 +49,7 @@
              (if (zero? (number-of-items bucket))
                (do
                  (log/info :mercator-flush-empty {})
+                 (set! last-flush (System/currentTimeMillis))
                  sieve)
                (do
                  (set! store (store-api/open store))
