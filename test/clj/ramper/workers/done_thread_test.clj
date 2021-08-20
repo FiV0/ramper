@@ -50,7 +50,7 @@
           virtualizer (virtual/workbench-virtualizer (util/temp-dir "done-thread-test"))
           _ (do (virtual/enqueue virtualizer empty-vs "/foo/bar")
                 (virtual/enqueue virtualizer empty-vs "/foo/bla"))
-          runtime-config (atom {:ramper/runtime-stop? false})
+          runtime-config (atom {:ramper/runtime-stop false})
           done-queue (atom (into clojure.lang.PersistentQueue/EMPTY [not-empty-vs empty-vs purgeable-visit-state]))
           refill-queue (atom clojure.lang.PersistentQueue/EMPTY)
           thread-data {:workbench wb
@@ -60,7 +60,7 @@
                        :virtualizer virtualizer}
           thread (async/thread (done-thread/done-thread thread-data))]
       (Thread/sleep 100)
-      (swap! runtime-config assoc :ramper/runtime-stop? true)
+      (swap! runtime-config assoc :ramper/runtime-stop true)
       (is (true? (async/<!! thread)))
       (is (= 1 (count @refill-queue)))
       (is (= empty-vs (peek @refill-queue)))

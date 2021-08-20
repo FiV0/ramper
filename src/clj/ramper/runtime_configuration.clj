@@ -38,7 +38,7 @@
 (defn stop?
   "Returns true when the agent should stop."
   ([] (stop? @runtime-config))
-  ([runtime-config] (:ramper/runtime-stop? runtime-config)))
+  ([runtime-config] (:ramper/runtime-stop runtime-config)))
 
 (defn approximate-url-cache-threshold
   "Returns the approximate size for the url cache based on

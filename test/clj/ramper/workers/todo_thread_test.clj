@@ -30,7 +30,7 @@
                   (assoc :next-fetch (util/from-now 20)
                          :ip-address dummy-ip3))
           wb (atom (reduce workbench/add-visit-state (workbench/workbench) [vs1 vs2 vs3]))
-          runtime-config (atom {:ramper/runtime-stop? false
+          runtime-config (atom {:ramper/runtime-stop false
                                 :ramper/max-urls-per-scheme+authority 10})
           todo-queue (atom clojure.lang.PersistentQueue/EMPTY)
           scheme+authority-to-count (atom {(url/scheme+authority "https://finnvolkel.com") 5
@@ -42,7 +42,7 @@
                        :todo-queue todo-queue}
           thread (async/thread (todo-thread/todo-thread thread-data))]
       (Thread/sleep 100)
-      (swap! runtime-config assoc :ramper/runtime-stop? true)
+      (swap! runtime-config assoc :ramper/runtime-stop true)
       (is (true? (async/<!! thread)))
       (is (= 3 (count @todo-queue)))
       (is (= (list vs1 vs3 vs2) (map #(dissoc % :locked-entry) @todo-queue))))))
