@@ -10,30 +10,32 @@
 
 (def ^:private root-dir (util/temp-dir "ramper-root"))
 
-;; these are the default values
-(def runtime-config (atom {:ramper/user-agent "ramper"
-                           :ramper/keepalive-time 2000 ;;
-                           :ramper/runtime-stop false
-                           :ramper/runtime-pause false
-                           :ramper/cookies-max-byte-size 2048
-                           :ramper/url-cache-max-byte-size (* 1024 1024 1024)
-                           :ramper/root-dir root-dir
-                           :ramper/sieve-size (* 64 1024 1024)
-                           :ramper/store-buffer-size (* 64 1024)
-                           :ramper/aux-buffer-size (* 64 1024)
-                           :ramper/ip-delay 2000 ;2 seconds
-                           :ramper/scheme+authority-delay 2000 ;2 seconds
-                           :ramper/frontier-dir (io/file root-dir "frontier")
+;; these are the default values when developing
+(def runtime-config (atom {:ramper/aux-buffer-size               (* 64 1024)
+                           :ramper/cookies-max-byte-size         2048
+                           :ramper/dns-threads                   1
+                           :ramper/fetching-threads              10
+                           :ramper/frontier-dir                  (io/file root-dir "frontier")
+                           :ramper/ip-delay                      2000 ;2 seconds
+                           :ramper/is-new                        true
+                           :ramper/keepalive-time                2000
                            :ramper/max-urls-per-scheme+authority 500
-                           ;; TODO for now, as otherwise stuff fails on CircleCI
-                           :ramper/store-dir #_(io/file (util/project-dir) "store")
-                           (util/temp-dir "store")
-                           :ramper/is-new true
                            ;; Current estimation of the size of the front in ip addresses. Adaptively
                            ;; increased by the fetching threads whenever they have to wait to retrieve
                            ;; a visit state from the todo queue.
-                           :ramper/required-front-size 1000
-                           :ramper/workbench-max-byte-size (* 512 1024 1024)}))
+                           :ramper/parsing-threads               2
+                           :ramper/required-front-size           1000
+                           :ramper/root-dir                      root-dir
+                           :ramper/runtime-pause                 false
+                           :ramper/runtime-stop                  false
+                           :ramper/scheme+authority-delay        2000 ;2 seconds
+                           :ramper/sieve-size                    (* 64 1024 1024)
+                           ;; TODO for now, as otherwise stuff fails on CircleCI
+                           :ramper/store-dir                     (util/temp-dir "store")
+                           :ramper/store-buffer-size             (* 64 1024)
+                           :ramper/url-cache-max-byte-size       (* 1024 1024 1024)
+                           :ramper/user-agent                    "ramper"
+                           :ramper/workbench-max-byte-size       (* 512 1024 1024)}))
 
 (defn workbench-size-in-path-queries
   "An estimation of how many path queries should reside in memory."

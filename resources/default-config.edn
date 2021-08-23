@@ -1,0 +1,33 @@
+{:ramper/aux-buffer-size               65536
+ :ramper/cookies-max-byte-size         2048
+ :ramper/dns-threads                   50
+ :ramper/fetching-threads              512
+ :ramper/ip-delay                      2000
+ :ramper/is-new                        true
+ :ramper/keepalive-time                2000
+ :ramper/max-urls                      10000
+ :ramper/max-urls-per-scheme+authority 500
+ :ramper/parsing-threads               64
+ :ramper/init-front-size               1000
+ :ramper/root-dir                      "default-crawl"
+ :ramper/scheme+authority-delay        2000
+ :ramper/sieve-size                    67108864
+ :ramper/store-buffer-size             65536
+ :ramper/url-cache-max-byte-size       1073741824
+ :ramper/user-agent                    "ramper"
+ :ramper/workbench-max-byte-size       536870912
+
+ ;; TODO add later
+ ;; :ramper/fetch-data-buffer-byte-size 200K
+ ;; :ramper/user-agent-from "youremail@yourdomain.com"
+ ;; :ramper/fetch-filter true
+ ;; :ramper/follow-filter true
+ ;; :ramper/parse-filter nil
+ ;; :ramper/parse-spec nil
+ ;; :ramper/response-body-max-byte-size 2M
+ ;; :ramper/robots-expiration 1h
+ ;; :ramper/schedule-filter nil
+ ;; :ramper/store-filter nil
+ ;; :ramper/start-paused false
+ ;; :ramper/socker-timeout 60s
+ }
