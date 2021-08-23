@@ -5,7 +5,6 @@
   others are sensible defaults. Some can be modified via jmx methods
   at runtime."
   (:require [clojure.java.io :as io]
-            [ramper.startup-configuration :as sc]
             [ramper.util :as util]))
 
 (def ^:private root-dir (util/temp-dir "ramper-root"))
@@ -63,6 +62,18 @@
      (when-not (.exists sieve-dir)
        (.mkdirs sieve-dir))
      sieve-dir)))
+
+(defn merge-startup-config
+  "Merges a ramper.startup-configuration into a runtime-config atom."
+  ([startup-config] (merge-startup-config startup-config runtime-config))
+  ([{:ramper/keys [root-dir] :as startup-config} runtime-config]
+   (reset! runtime-config
+           (merge startup-config
+                  {:ramper/is-new        true
+                   :ramper/frontier-dir  (io/file root-dir "frontier")
+                   :ramper/runtime-pause false
+                   :ramper/runtime-stop  false
+                   :ramper/store-dir     (io/file root-dir "store")}))))
 
 (comment
   (.mkdirs (io/file (util/project-dir) "store"))

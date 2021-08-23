@@ -130,6 +130,10 @@
   "The weight of all the path+queris stored in visit-state queues."
   (atom 0))
 
+(def urls-crawled
+  "The total number of urls crawled and stored."
+  (atom 0))
+
 (def scheme+authority-to-count
   "A map from scheme+authority to number of urls crawled (or to be crawled) so far.
 
@@ -158,6 +162,7 @@
    (reset! received-urls (data-disk-queues-init "received"))
    (reset! path-queries-in-queues 0)
    (reset! weight-of-path-queries 0)
+   (reset! urls-crawled 0)
    (reset! scheme+authority-to-count {})))
 
 (defn workbench-full?
