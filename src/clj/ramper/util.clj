@@ -138,3 +138,15 @@
   "Returns the directory from which the JVM was started."
   []
   (io/file (System/getProperty "user.dir")))
+
+(defn make-absolute
+  "Makes a file absolute with respect to the project root."
+  [file]
+  (if (.isAbsolute file)
+    file
+    (io/file (project-dir) file)))
+
+(comment
+  (.exists (make-absolute (io/file "resources/seed.txt")))
+
+  )
