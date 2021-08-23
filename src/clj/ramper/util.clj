@@ -146,7 +146,11 @@
     file
     (io/file (project-dir) file)))
 
-(comment
-  (.exists (make-absolute (io/file "resources/seed.txt")))
-
-  )
+;; copied from rosetta code
+(defn empty-dir?
+  "Check if `path` is an empty directory."
+  [path]
+  (let [file (io/file path)]
+    (assert (.exists file))
+    (assert (.isDirectory file))
+    (-> file .list empty?)))
