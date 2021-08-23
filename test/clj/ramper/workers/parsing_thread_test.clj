@@ -23,7 +23,7 @@
 (deftest parse-fetched-data-test
   (let [html-url (uri/uri "https://httpbin.org/html")
         bytes-url (uri/uri "https://httpbin.org/bytes/1000")
-        links-url (uri/uri "https://finnvolkel.com/about")
+        links-url (uri/uri "https://finnvolkel.com/about") ;; TODO use something more persistent
         html-response (client/get (str html-url))
         bytes-response (client/get (str bytes-url))
         links-response (client/get (str links-url))

@@ -23,8 +23,15 @@
 ;; TODO should this be configurable
 (def front-too-small-loop-size 100)
 
-(defn enlarge-front [{:keys [workbench virtualizer runtime-config scheme+authority-to-count
-                             ready-urls new-visit-states] :as _thread-data} stats]
+(defn enlarge-front
+  "Dequeues keys from the sieve (through a flow receiver) and either drops them
+  (already too many urls parsed for a domain), add the url to workbench virtualizer
+  (a visit state exists and is in circulation) or creates a new visit state
+  for new domains.
+
+  For the given thread-data map see r.workers.distributor/distributor-thread."
+  [{:keys [workbench virtualizer runtime-config scheme+authority-to-count
+           ready-urls new-visit-states] :as _thread-data} stats]
   (loop [cnt 0 stats stats scheme+authority-to-new-visit-states {}]
     (if (and (< cnt front-too-small-loop-size)
              (pos? (flow-receiver/size ready-urls)))
@@ -61,10 +68,42 @@
         (swap! new-visit-states #(into % (vals scheme+authority-to-new-visit-states)))
         stats))))
 
-(defn distributor-thread [{:keys [workbench todo-queue refill-queue
-                                  virtualizer sieve runtime-config ready-urls
-                                  _scheme+authority-to-count _new-visit-states
-                                  path-queries-in-queues] :as thread-data}]
+(defn distributor-thread
+  "The distributor thread takes care of refilling the workbench, passing new
+  visit states to the dns threads and adding urls to the virtualizer.
+
+  The thread-data map must contain:
+
+  :workbench - an atom wrapping the agents workbench.
+
+  :todo-queue - an atom wrapping a Clojure persistent queue from which ready visit
+  states can be dequeued.
+
+  :refill-queue - a clojure.lang.PersistentQueue to which the refillable
+  visit states will be enqueued.
+
+  :virtualizer - a workbench virtualizer, see also
+  ramper.frontier.workbench.virtualizer.
+
+  :sieve - a sieve satisfying r.sieve/Sieve
+
+  :runtime-config - an atom wrapping the runtime config of the agent.
+
+  :ready-urls - a flow receiver of urls (as strings) that have passed the sieve
+  and implementing r.sieve.flow-receiver/FlowReceiver.
+
+  :scheme+authority-to-count - an atom wrapping a mapping from scheme+authority to the
+  number of path queries that have passed through the workbench.
+
+  :new-visit-state - a clojure.lang.PersistentQueue to which the new
+  visit states (without resolved ip-address) will be enqueued.
+
+  :path-queries-in-queues - an atom wrapping a counter for the number of
+  path-queries in visit states."
+  [{:keys [workbench todo-queue refill-queue
+           virtualizer sieve runtime-config ready-urls
+           _scheme+authority-to-count _new-visit-states
+           path-queries-in-queues] :as thread-data}]
   (thread-utils/set-thread-name (str *ns*))
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
