@@ -113,7 +113,7 @@
           new-visit-states (atom clojure.lang.PersistentQueue/EMPTY)
           path-queries-in-queues (atom 5)
           thread-data {:workbench workbench :todo-queue todo-queue
-                       :refill-queue refill-queue
+                       :refill-queue refill-queue :stats-chan (async/chan (async/sliding-buffer 3))
                        :virtualizer virtualizer :sieve sieve
                        :runtime-config runtime-config :ready-urls ready-urls
                        :scheme+authority-to-count scheme+authority-to-count

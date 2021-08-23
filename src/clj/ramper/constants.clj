@@ -53,3 +53,7 @@
 (def min-flush-interval
   "The minimum time in milliseconds between two flushes."
   (.. TimeUnit/SECONDS (toMillis 10)))
+
+(def stats-interval
+  "The interval at which stats should be pushed to the stats thread."
+  (.. TimeUnit/SECONDS (toMillis 10)))

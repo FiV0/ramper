@@ -1,6 +1,7 @@
 (ns ramper.workers.distributor
   "The code for the distributor thread of ramper."
-  (:require [io.pedestal.log :as log]
+  (:require [clojure.core.async :as async]
+            [io.pedestal.log :as log]
             [ramper.constants :as constants]
             [ramper.frontier :as frontier]
             [ramper.frontier.workbench :as workbench]
@@ -103,7 +104,7 @@
   [{:keys [workbench todo-queue refill-queue
            virtualizer sieve runtime-config ready-urls
            _scheme+authority-to-count _new-visit-states
-           path-queries-in-queues] :as thread-data}]
+           path-queries-in-queues stats-chan] :as thread-data}]
   (thread-utils/set-thread-name (str *ns*))
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
@@ -120,6 +121,7 @@
               workbench-full (frontier/workbench-full? @runtime-config @path-queries-in-queues)
               front-too-small (front-too-small? @workbench @todo-queue required-front-size)
               now (System/currentTimeMillis)]
+          (async/offer! stats-chan stats) ;; TODO should this only be done at certain time intervals?
           ;; TODO try to refactor this in one big cond
           (cond (not workbench-full)
                 (do
