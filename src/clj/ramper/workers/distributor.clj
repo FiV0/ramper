@@ -107,76 +107,75 @@
   (thread-utils/set-thread-name (str *ns*))
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
-    (let [required-front-size (:ramper/required-front-size @runtime-config)]
-      (loop [round 0 stats {:moved-from-queues         0
-                            :deleted-from-queues       0
-                            :full-workbench-sleep-time 0
-                            :large-front-sleep-time    0
-                            :no-ready-urls-sleep-time  0
-                            :from-sieve-to-virtualizer 0
-                            :from-sieve-to-overflow    0
-                            :from-sieve-to-workbench   0
-                            :deleted-from-sieve        0}]
-        (when-not (runtime-config/stop? @runtime-config)
-          (let [workbench-full (frontier/workbench-full? @runtime-config @path-queries-in-queues)
-                front-too-small (front-too-small? @workbench @todo-queue required-front-size)
-                now (System/currentTimeMillis)]
-            ;; TODO try to refactor this in one big cond
-            (cond (not workbench-full)
-                  (do
-                    ;; stopping here when flushing
-                    (locking sieve)
-                    (cond-let [visit-state (queue-utils/dequeue! refill-queue)]
-                              (let [visit-state-size (visit-state/size visit-state)
-                                    virtual-empty (= 0 (virtual/count virtualizer visit-state))]
-                                (cond
-                                  ;; nothing on disk and visit-state is empty
-                                  (and (= 0 visit-state-size) virtual-empty)
-                                  (do
-                                    (log/info :distributor/purge {:visit-state (dissoc visit-state :path-queries)})
-                                    (swap! workbench workbench/purge-visit-state visit-state)
-                                    (recur 0 stats))
-                                  ;; nothing on disk but visit-state still contains urls
-                                  virtual-empty
-                                  (do
-                                    (log/info :distributor/no-urls {:visit-state (dissoc visit-state :path-queries)})
-                                    (swap! workbench workbench/add-visit-state visit-state)
-                                    (recur 0 stats))
-                                  ;; we refill the visit state
-                                  :else
-                                  (let [path-query-limit (workbench/path-query-limit
-                                                          @workbench visit-state @runtime-config required-front-size)
+    (loop [round 0 stats {:moved-from-queues         0
+                          :full-workbench-sleep-time 0
+                          :large-front-sleep-time    0
+                          :no-ready-urls-sleep-time  0
+                          :from-sieve-to-virtualizer 0
+                          :from-sieve-to-workbench   0
+                          :deleted-from-sieve        0
+                          :visit-states-purged       0}]
+      (when-not (runtime-config/stop? @runtime-config)
+        (let [required-front-size (:ramper/required-front-size @runtime-config)
+              workbench-full (frontier/workbench-full? @runtime-config @path-queries-in-queues)
+              front-too-small (front-too-small? @workbench @todo-queue required-front-size)
+              now (System/currentTimeMillis)]
+          ;; TODO try to refactor this in one big cond
+          (cond (not workbench-full)
+                (do
+                  ;; stopping here when flushing
+                  (locking sieve)
+                  (cond-let [visit-state (queue-utils/dequeue! refill-queue)]
+                            (let [visit-state-size (visit-state/size visit-state)
+                                  virtual-empty (= 0 (virtual/count virtualizer visit-state))]
+                              (cond
+                                ;; nothing on disk and visit-state is empty
+                                (and (= 0 visit-state-size) virtual-empty)
+                                (do
+                                  (log/info :distributor/purge {:visit-state (dissoc visit-state :path-queries)})
+                                  (swap! workbench workbench/purge-visit-state visit-state)
+                                  (recur 0 (update stats :visit-states-purged inc)))
+                                ;; nothing on disk but visit-state still contains urls
+                                virtual-empty
+                                (do
+                                  (log/info :distributor/no-urls {:visit-state (dissoc visit-state :path-queries)})
+                                  (swap! workbench workbench/add-visit-state visit-state)
+                                  (recur 0 stats))
+                                ;; we refill the visit state
+                                :else
+                                (let [path-query-limit (workbench/path-query-limit
+                                                        @workbench visit-state @runtime-config required-front-size)
 
-                                        new-visit-state (virtual/dequeue-path-queries
-                                                         virtualizer visit-state path-query-limit)
-                                        new-visit-state-size (visit-state/size new-visit-state)]
-                                    (swap! workbench workbench/add-visit-state new-visit-state)
-                                    (recur 0 (update stats :moved-from-queues + (- new-visit-state-size visit-state-size))))))
+                                      new-visit-state (virtual/dequeue-path-queries
+                                                       virtualizer visit-state path-query-limit)
+                                      new-visit-state-size (visit-state/size new-visit-state)]
+                                  (swap! workbench workbench/add-visit-state new-visit-state)
+                                  (recur 0 (update stats :moved-from-queues + (- new-visit-state-size visit-state-size))))))
 
-                              (and front-too-small
-                                   (zero? (flow-receiver/size ready-urls))
-                                   (>= now (+ (sieve/last-flush sieve) constants/min-flush-interval)))
-                              (do
-                                (sieve/flush sieve)
-                                (recur 0 stats))
+                            (and front-too-small
+                                 (zero? (flow-receiver/size ready-urls))
+                                 (>= now (+ (sieve/last-flush sieve) constants/min-flush-interval)))
+                            (do
+                              (sieve/flush sieve)
+                              (recur 0 stats))
 
-                              (and front-too-small (pos? (flow-receiver/size ready-urls)))
-                              (recur 0 (enlarge-front thread-data stats))
+                            (and front-too-small (pos? (flow-receiver/size ready-urls)))
+                            (recur 0 (enlarge-front thread-data stats))
 
-                              :else
-                              (recur 0 stats)))
+                            :else
+                            (recur 0 stats)))
 
-                  (not= 0 round)
-                  (let [sleep-time (bit-shift-left 1 (min 10 round))]
-                    (Thread/sleep sleep-time)
-                    (cond (not front-too-small)
-                          (recur (inc round) (update stats :large-front-sleep-time + sleep-time))
-                          workbench-full
-                          (recur (inc round) (update stats :full-workbench-sleep-time + sleep-time))
-                          :else
-                          (recur (inc round) (update stats :no-ready-urls-sleep-time + sleep-time))))
-                  :else
-                  (recur (inc round) stats))))))
+                (not= 0 round)
+                (let [sleep-time (bit-shift-left 1 (min 10 round))]
+                  (Thread/sleep sleep-time)
+                  (cond (not front-too-small)
+                        (recur (inc round) (update stats :large-front-sleep-time + sleep-time))
+                        workbench-full
+                        (recur (inc round) (update stats :full-workbench-sleep-time + sleep-time))
+                        :else
+                        (recur (inc round) (update stats :no-ready-urls-sleep-time + sleep-time))))
+                :else
+                (recur (inc round) stats)))))
 
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
