@@ -57,6 +57,8 @@
       (when-not (lru/check url-cache url)
         (lru/add url-cache url)
         (let [scheme+authority (url/scheme+authority url)]
+          ;; Note that a visit-state will get purged at some point as it no longer receives
+          ;; urls through the sieve.
           (when (< (get @scheme+authority-to-count scheme+authority 0)
                    (:ramper/max-urls-per-scheme+authority @runtime-config))
             (sieve/enqueue sieve (str url))))))))

@@ -130,12 +130,6 @@
   "The weight of all the path+queris stored in visit-state queues."
   (atom 0))
 
-(def required-front-size
-  "Current estimation of the size of the front in ip addresses. Adaptively
-  increased by the fetching threads whenever they have to wait to retrieve
-  a visit state from the todo queue."
-  (atom (:ramper/init-front-size @runtime-config/runtime-config)))
-
 (def scheme+authority-to-count
   "A map from scheme+authority to number of urls crawled (or to be crawled) so far.
 
@@ -145,7 +139,7 @@
 (defn initiailze-frontier
   "Initializes the frontiers datastructures."
   ([] (initiailze-frontier @runtime-config/runtime-config))
-  ([runtime-config]
+  ([_runtime-config]
    (reset! refill-queue clojure.lang.PersistentQueue/EMPTY)
    (reset! done-queue clojure.lang.PersistentQueue/EMPTY)
    (reset! todo-queue clojure.lang.PersistentQueue/EMPTY)
@@ -164,7 +158,6 @@
    (reset! received-urls (data-disk-queues-init "received"))
    (reset! path-queries-in-queues 0)
    (reset! weight-of-path-queries 0)
-   (reset! required-front-size (:ramper/init-front-size runtime-config))
    (reset! scheme+authority-to-count {})))
 
 (defn workbench-full?

@@ -29,7 +29,10 @@
                            :ramper/store-dir #_(io/file (util/project-dir) "store")
                            (util/temp-dir "store")
                            :ramper/is-new true
-                           :ramper/init-front-size 1000
+                           ;; Current estimation of the size of the front in ip addresses. Adaptively
+                           ;; increased by the fetching threads whenever they have to wait to retrieve
+                           ;; a visit state from the todo queue.
+                           :ramper/required-front-size 1000
                            :ramper/workbench-max-byte-size (* 512 1024 1024)}))
 
 (defn workbench-size-in-path-queries

@@ -107,13 +107,13 @@
                                 :ramper/max-urls-per-scheme+authority 3
                                 :ramper/workbench-max-byte-size (* 1024 1024)
                                 :ramper/ip-delay 2000
-                                :ramper/scheme+authority-delay 2000})
+                                :ramper/scheme+authority-delay 2000
+                                :ramper/required-front-size 1000})
           scheme+authority-to-count (atom {(url/scheme+authority (first urls)) 3})
           new-visit-states (atom clojure.lang.PersistentQueue/EMPTY)
-          required-front-size (atom 1000)
           path-queries-in-queues (atom 5)
           thread-data {:workbench workbench :todo-queue todo-queue
-                       :refill-queue refill-queue :required-front-size required-front-size
+                       :refill-queue refill-queue
                        :virtualizer virtualizer :sieve sieve
                        :runtime-config runtime-config :ready-urls ready-urls
                        :scheme+authority-to-count scheme+authority-to-count

@@ -17,7 +17,8 @@
                                       :ramper/scheme+authority-delay
                                       :ramper/workbench-max-byte-size
                                       :ramper/url-cache-max-byte-size
-                                      :ramper/sieve-size]))
+                                      :ramper/sieve-size
+                                      :ramper/init-front-size]))
 
 (defn read-config
   "Read the config from `file` or from a default config."

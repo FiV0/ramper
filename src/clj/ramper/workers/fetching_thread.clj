@@ -17,6 +17,8 @@
            (org.apache.http.impl DefaultConnectionReuseStrategy)
            (org.apache.http.impl.client HttpClientBuilder)))
 
+(def ^:private front-increase 100)
+
 ;; results data is of the form
 ;; {:url ... :response ...}
 
@@ -186,6 +188,7 @@
       (loop [i 0 wait-time 0]
         (when-not (async/poll! stop-chan)
           (if-let [visit-state (pq/dequeue! todo-queue)]
+
             (let [start-time (System/currentTimeMillis)]
               (loop [vs visit-state]
                 (if (and (visit-state/first-path vs)
@@ -222,11 +225,16 @@
                           (swap! workbench workbench/purge-visit-state vs)))))
                   (swap! done-queue conj vs)))
               (recur 0 wait-time))
+
             (let [time (bit-shift-left 1 (max 10 i))]
+              (log/info :fetching-thread
+                        (cond-> {:sleep-time time}
+                          (compare-and-set! runtime-config @runtime-config
+                                            (update @runtime-config :ramper/required-front-size + front-increase))
+                          (assoc :front-increase front-increase)))
               (Thread/sleep time)
-              ;; TODO add frontier growing here
-              (log/info :fetching-thread {:sleep-time time})
               (recur (inc i) (+ wait-time time))))))
+
       (catch Throwable t
         (log/error :unexpected-ex {:ex t}))))
   (log/info :graceful-shutdown {:type :fetching-thread
