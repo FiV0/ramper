@@ -78,7 +78,8 @@
 (deftest fetching-thread-test
   (let [runtime-config (atom {:ramper/keepalive-time 5000 ;; this test should not depend on keep alive time
                               :ramper/scheme+authority-delay 2000
-                              :ramper/ip-delay 2000})
+                              :ramper/ip-delay 2000
+                              :ramper/required-front-size 1000})
         host1 "clojure.org"
         host2 "httpbin.org"
         host3 "finnvolkel.com" ;; explicitly using a wrong ip
@@ -129,3 +130,23 @@
     (is (= 4 (count @results-queue)))
     (is (every? #(s/valid? ::fetched-data/fetched-data %) @results-queue))
     (is (match? [200 200 400 200] (map #(-> % :response :status) @results-queue)))))
+
+(deftest fetching-thread-front-expansion
+  (let [runtime-config (atom {:ramper/keepalive-time 5000 ;; this test should not depend on keep alive time
+                              :ramper/scheme+authority-delay 2000
+                              :ramper/ip-delay 2000
+                              :ramper/required-front-size 1000})
+        dns-resolver (dns-resolving/global-java-dns-resolver)
+        conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
+        workbench (atom (workbench/workbench))
+        results-queue (atom clojure.lang.PersistentQueue/EMPTY)
+        todo-queue (atom clojure.lang.PersistentQueue/EMPTY)
+        done-queue (atom clojure.lang.PersistentQueue/EMPTY)
+        thread-data {:connection-manager conn-mgr :dns-resolver dns-resolver
+                     :workbench workbench :results-queue results-queue
+                     :runtime-config runtime-config :todo-queue todo-queue
+                     :done-queue done-queue}
+        tw (thread-util/thread-wrapper (partial fetching-thread/fetching-thread thread-data 1))]
+    (Thread/sleep 500)
+    (is (true? (thread-util/stop tw)))
+    (is (= (+ 1000 fetching-thread/front-increase) (:ramper/required-front-size @runtime-config)))))

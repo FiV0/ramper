@@ -17,7 +17,8 @@
            (org.apache.http.impl DefaultConnectionReuseStrategy)
            (org.apache.http.impl.client HttpClientBuilder)))
 
-(def ^:private front-increase 100)
+;; TODO make configurable
+(def front-increase 100)
 
 ;; results data is of the form
 ;; {:url ... :response ...}
