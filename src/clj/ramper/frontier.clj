@@ -2,23 +2,22 @@
   "The frontier contains a certain number datastructures shared across different
   threads of an agent."
   (:require [clojure.java.io :as io]
+            [lambdaisland.uri :as uri]
             [ramper.frontier.workbench :as workbench]
             [ramper.frontier.workbench.virtualizer :as virtualizer]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.sieve.disk-flow-receiver :as receiver]
             [ramper.sieve.mercator-sieve :as mercator-sieve]
+            [ramper.startup-configuration :as startup-config]
             [ramper.store.parallel-buffered-store :as store]
             [ramper.util.data-disk-queues :as ddq]
             [ramper.util.delay-queue :as delay-queue]
-            [ramper.util.lru-immutable :as lru]
+            [ramper.util.lru :as lru]
+            [ramper.util.lru-immutable :as lru-immutable]
             [ramper.util.url :as url]))
 
 ;; TODO maybe create a frontier that holds all the below datastructures
 ;; and pass that around
-;; TODO maybe make init functions configurable by runtime-config passing
-
-(defn- frontier-subdir [name]
-  (io/file (:ramper/frontier-dir @runtime-config/runtime-config) name))
 
 (def refill-queue
   "A queue containing visit states that can be refilled. Filled in the \"done\"
@@ -49,8 +48,13 @@
   ramper.frontier.workbench."
   (atom (workbench/workbench)))
 
-(defn workbench-virtualizer-init []
-  (virtualizer/workbench-virtualizer (frontier-subdir "virtualizer")))
+(defn- frontier-subdir [runtime-config name]
+  (io/file (:ramper/frontier-dir runtime-config) name))
+
+(defn workbench-virtualizer-init
+  ([] (workbench-virtualizer-init @runtime-config/runtime-config))
+  ([runtime-config]
+   (virtualizer/workbench-virtualizer (frontier-subdir runtime-config "virtualizer"))))
 
 (def workbench-virtualizer
   "The virtualizer for the workbench."
@@ -60,7 +64,7 @@
 (def url-cache
   "An url cache for the urls seen recently. This avoids overloading the sieve and
   catches (apparently) already 90% of duplicates."
-  (lru/create-lru-cache (runtime-config/approximate-url-cache-threshold) url/hash-url))
+  (lru-immutable/create-lru-cache (runtime-config/approximate-url-cache-threshold) url/hash-url))
 
 ;; TODO maybe move to ramper.workers.dns-resolving
 (def unknown-hosts
@@ -85,26 +89,30 @@
   `ramper.sieve.disk-flow-receiver.DiskFlowReceiverDequeue`"
   (atom (url-flow-receiver-init)))
 
-(defn- sieve-init []
-  (mercator-sieve/mercator-seive
-   true
-   (runtime-config/sieve-dir)
-   (:ramper/sieve-size @runtime-config/runtime-config)
-   (:ramper/store-buffer-size @runtime-config/runtime-config)
-   (:ramper/aux-buffer-size @runtime-config/runtime-config)
-   @ready-urls
-   (url/url-byte-serializer)
-   url/hash-url))
+(defn- sieve-init
+  ([] (sieve-init @runtime-config/runtime-config @ready-urls))
+  ([runtime-config receiver]
+   (mercator-sieve/mercator-seive
+    true
+    (runtime-config/sieve-dir runtime-config)
+    (:ramper/sieve-size runtime-config)
+    (:ramper/store-buffer-size runtime-config)
+    (:ramper/aux-buffer-size runtime-config)
+    receiver
+    (url/url-byte-serializer)
+    url/hash-url)))
 
 (def sieve
   "An url sieve implementing `ramper.sieve.Sieve`."
   (atom (sieve-init)))
 
-(defn- store-init []
-  (store/parallel-buffered-store
-   (:ramper/store-dir @runtime-config/runtime-config)
-   (:ramper/is-new @runtime-config/runtime-config)
-   (:ramper/store-buffer-size @runtime-config/runtime-config)))
+(defn- store-init
+  ([] (store-init @runtime-config/runtime-config))
+  ([runtime-config]
+   (store/parallel-buffered-store
+    (:ramper/store-dir runtime-config)
+    (:ramper/is-new runtime-config)
+    (:ramper/store-buffer-size runtime-config))))
 
 (def store
   "A response store that must implement ramper.store/Store and probably should implement
@@ -114,7 +122,7 @@
 (defn- data-disk-queues-init [name]
   (ddq/data-disk-queues (io/file (:ramper/frontier-dir @runtime-config/runtime-config) name)))
 
-;; not used for now
+;; TODO not used for now
 (def received-urls
   "A (probably disk-based) queue to store urls coming from different agents."
   (atom (data-disk-queues-init "received")))
@@ -123,6 +131,7 @@
   "The overall number of path queries stored in visit-state queues."
   (atom 0))
 
+;; TODO not used for now
 ;; TODO: Do we really need this? Maybe otherwise to much load on memory.
 ;; Should we just an approximate amount of path+queries that should reside in
 ;; memory? See runtime-config/workbench-size-in-path-queries.
@@ -143,7 +152,7 @@
 (defn initiailze-frontier
   "Initializes the frontiers datastructures."
   ([] (initiailze-frontier @runtime-config/runtime-config))
-  ([_runtime-config]
+  ([runtime-config]
    (reset! refill-queue clojure.lang.PersistentQueue/EMPTY)
    (reset! done-queue clojure.lang.PersistentQueue/EMPTY)
    (reset! todo-queue clojure.lang.PersistentQueue/EMPTY)
@@ -151,8 +160,8 @@
    (reset! workbench (workbench/workbench))
    (reset! workbench-virtualizer (workbench-virtualizer-init))
    ;; TODO find a more elegent way
-   (alter-var-root #'url-cache (fn [_] (lru/create-lru-cache
-                                        (runtime-config/approximate-url-cache-threshold)
+   (alter-var-root #'url-cache (fn [_] (lru-immutable/create-lru-cache
+                                        (runtime-config/approximate-url-cache-threshold runtime-config)
                                         url/hash-url)))
    (reset! unknown-hosts (delay-queue/delay-queue))
    (reset! new-visit-states clojure.lang.PersistentQueue/EMPTY)
@@ -171,3 +180,34 @@
   ([runtime-config path-queries-in-queues]
    #_(<= (:ramper/workbench-max-byte-size @runtime-config/runtime-config) @weight-of-path-queries)
    (<= (runtime-config/workbench-size-in-path-queries runtime-config) path-queries-in-queues)))
+
+(defrecord Frontier [refill-queue done-queue todo-queue results-queue
+                     workbench virtualizer url-cache unkonwn-hosts
+                     new-visit-states ready-urls sieve store
+                     path-queries-in-queues urls-crawled scheme+authority-to-count])
+
+(defn frontier
+  "Creates a frontier initialized with all the data-structures used by an agent."
+  [runtime-config]
+  (let [seed-urls (startup-config/read-urls (:ramper/seed-file runtime-config))
+        url-cache (lru-immutable/create-lru-cache
+                   (runtime-config/approximate-url-cache-threshold runtime-config)
+                   url/hash-url)
+        ready-urls (url-flow-receiver-init)
+        sieve (sieve-init runtime-config ready-urls)]
+    (run! #(lru/add url-cache (uri/uri %)) seed-urls)
+    (->Frontier (atom clojure.lang.PersistentQueue/EMPTY)
+                (atom clojure.lang.PersistentQueue/EMPTY)
+                (atom clojure.lang.PersistentQueue/EMPTY)
+                (atom clojure.lang.PersistentQueue/EMPTY)
+                (atom (workbench/workbench))
+                (workbench-virtualizer-init runtime-config)
+                url-cache
+                (atom (delay-queue/delay-queue))
+                (atom clojure.lang.PersistentQueue/EMPTY)
+                ready-urls
+                sieve
+                (store-init runtime-config)
+                (atom 0)
+                (atom 0)
+                (atom {}))))
