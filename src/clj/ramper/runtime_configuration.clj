@@ -67,13 +67,19 @@
   "Merges a ramper.startup-configuration into a runtime-config atom."
   ([startup-config] (merge-startup-config startup-config runtime-config))
   ([{:ramper/keys [root-dir] :as startup-config} runtime-config]
-   (reset! runtime-config
-           (merge startup-config
-                  {:ramper/is-new        true
-                   :ramper/frontier-dir  (io/file root-dir "frontier")
-                   :ramper/runtime-pause false
-                   :ramper/runtime-stop  false
-                   :ramper/store-dir     (io/file root-dir "store")}))))
+   (let [frontier-dir (io/file root-dir "frontier")
+         store-dir (io/file root-dir "store")]
+     (when-not (.exists frontier-dir)
+       (.mkdirs frontier-dir))
+     (when-not (.exists store-dir)
+       (.mkdirs store-dir))
+     (reset! runtime-config
+             (merge startup-config
+                    {:ramper/is-new        true
+                     :ramper/frontier-dir  frontier-dir
+                     :ramper/runtime-pause false
+                     :ramper/runtime-stop  false
+                     :ramper/store-dir     store-dir})))))
 
 (comment
   (.mkdirs (io/file (util/project-dir) "store"))
