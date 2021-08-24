@@ -142,9 +142,9 @@
 (defn make-absolute
   "Makes a file absolute with respect to the project root."
   [file]
-  (if (.isAbsolute file)
-    file
-    (io/file (project-dir) file)))
+  (let [file (io/file file)]
+    (cond->>  file
+      (not (.isAbsolute file)) (io/file (project-dir)))))
 
 ;; copied from rosetta code
 (defn empty-dir?
