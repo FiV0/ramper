@@ -58,7 +58,25 @@
 
                 ;; only for a repl sessions
                 cheshire/cheshire {:mvn/version "5.10.0"}}
-   :jvm-opts ["-Xverify:none"]}
+   :jvm-opts ["-Xverify:none"
+              "-Xss512k" ;; stack size
+              "-Xms5g"   ;; initial memory allocation pool
+              "-XX:+UseNUMA"
+              "-Djavax.net.ssl.sessionCacheSize=8192"
+              "-XX:+UseTLAB"
+              "-XX:+ResizeTLAB"
+              "-XX:NewRatio=4"
+              "-XX:MaxTenuringThreshold=15"
+              "-XX:+CMSParallelRemarkEnabled"
+              "-verbose:gc"
+              "-Xlog:gc:gc.log"
+              "-Xlog:gc*"
+              "-XX:+PrintSafepointStatistics"
+              "-XX:PrintSafepointStatisticsCount=1"
+              ;; "-Djava.net.preferIPv4Stack=true"
+              ;; "-Dlogback.configurationFile=resources/logback.xml" add to readme
+              ;; "-Djava.rmi.server.hostname=127.0.0.1"
+              ]}
 
   :test
   {:extra-paths ["test/clj"]
