@@ -160,19 +160,19 @@
   :connection-manager - a http connection manager from which to build a http client.
 
   :dns-resolver - a dns resolver with which also the above connection manager was
-  intialized.
+  initialized.
 
-  :results-queue - an atom wrapping a Clojure persistent queue to which fetched data
+  :results-queue - an atom wrapping a clojure.lang.PersistentQueue to which fetched data
   can be pushed.
 
   :workbench - an atom wrapping the agents workbench.
 
   :runtime-config - an atom wrapping the runtime config of the agent.
 
-  :todo-queue - an atom wrapping a Clojure persistent queue from which ready visit
+  :todo-queue - an atom wrapping a clojure.lang.PersistentQueue from which ready visit
   states can be dequeued.
 
-  :done-queue - an atom wrapping a Clojure persistent queue to which finished visit
+  :done-queue - an atom wrapping a clojure.lang.PersistentQueue to which finished visit
   states can be enqueued."
   [{:keys [connection-manager results-queue workbench
            runtime-config todo-queue done-queue] :as thread-data}
@@ -212,7 +212,7 @@
                           (swap! results-queue conj fetched-data)
                           (recur (->>
                                   (limit-cookies (seq (.getCookies cookie-store)) cookies-max-byte-size)
-                                  (visit-state/set-cookies vs ))))
+                                  (visit-state/set-cookies vs))))
                         ;; an error occurred, but the visit-state does not need to be purged
                         continue
                         (do

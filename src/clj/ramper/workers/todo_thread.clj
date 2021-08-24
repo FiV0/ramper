@@ -18,7 +18,7 @@
   :todo-queue - a clojure.lang.PersistentQueue to which the available
   visit states will be added
 
-  :scheme+authority-to-count - a map mapping scheme+authority to the
+  :scheme+authority-to-count - an atom wrapping a map from scheme+authority to the
   number of path queries that have passed through the workbench"
   [{:keys [runtime-config workbench
            todo-queue scheme+authority-to-count] :as _thread_data}]
@@ -29,7 +29,7 @@
       ;; TODO maybe make the dequeue loop explict to enable logging
       ;; TODO maybe enable backoff, check if loop spins
       (when-let [{:keys [scheme+authority] :as visit-state} (workbench/dequeue-visit-state! workbench)]
-        (assert (<= (get scheme+authority-to-count scheme+authority 0)
+        (assert (<= (get @scheme+authority-to-count scheme+authority 0)
                     (:ramper/max-urls-per-scheme+authority @runtime-config)))
         (swap! todo-queue conj visit-state)))
     (catch Throwable t

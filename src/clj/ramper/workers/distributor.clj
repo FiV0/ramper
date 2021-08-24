@@ -77,10 +77,10 @@
 
   :workbench - an atom wrapping the agents workbench.
 
-  :todo-queue - an atom wrapping a Clojure persistent queue from which ready visit
+  :todo-queue - an atom wrapping a clojure.lang.PersistentQueue from which ready visit
   states can be dequeued.
 
-  :refill-queue - a clojure.lang.PersistentQueue to which the refillable
+  :refill-queue - an atom wrapping a clojure.lang.PersistentQueue to which the refillable
   visit states will be enqueued.
 
   :virtualizer - a workbench virtualizer, see also
@@ -96,7 +96,7 @@
   :scheme+authority-to-count - an atom wrapping a mapping from scheme+authority to the
   number of path queries that have passed through the workbench.
 
-  :new-visit-state - a clojure.lang.PersistentQueue to which the new
+  :new-visit-state - an atom wrapping a clojure.lang.PersistentQueue to which the new
   visit states (without resolved ip-address) will be enqueued.
 
   :path-queries-in-queues - an atom wrapping a counter for the number of

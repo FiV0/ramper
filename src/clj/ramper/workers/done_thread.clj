@@ -19,10 +19,10 @@
 
   :workbench - an atom containing the workbench of the agent
 
-  :done-queue - a clojure.lang.PersistentQueue from which the available
+  :done-queue - an atom wrapping a clojure.lang.PersistentQueue from which the available
   visit states will be dequeued
 
-  :refill-queue - a clojure.lang.PersistentQueue to which the refillable
+  :refill-queue - an atom wrapping a clojure.lang.PersistentQueue to which the refillable
   visit states will be enqueued
 
   :virtualizer - a workbench virtualizer, see also
