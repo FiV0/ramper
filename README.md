@@ -15,7 +15,7 @@ TODO: explain tools.build options
 When developing you need to build the java files once before jacking in.
 
 ```bash
-#> clojure -T:build java
+clojure -T:build java
 ```
 
 The `pom.xml` at the root of the repo currently only serves for easier Java development
@@ -25,7 +25,12 @@ in combination with IDEs that support Maven integration.
 
 The tests can be run with
 ```bash
-#> clojure -M:test -m cognitect.test-runner
+clojure -M:test -m cognitect.test-runner
+```
+
+If one wants to run a specific test, use the `-X` option. See also [cognitect.test-runner](https://github.com/cognitect-labs/test-runner) for options which tests to invoke.
+```bash
+clojure -X:test :nses ['ramper.workers.parsing-thread-test]
 ```
 
 ## License
