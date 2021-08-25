@@ -121,7 +121,8 @@
               workbench-full (frontier/workbench-full? @runtime-config @path-queries-in-queues)
               front-too-small (front-too-small? @workbench @todo-queue required-front-size)
               now (System/currentTimeMillis)]
-          (async/offer! stats-chan stats) ;; TODO should this only be done at certain time intervals?
+          ;; TODO should this only be done at certain time intervals?
+          (async/offer! stats-chan stats)
           ;; TODO try to refactor this in one big cond
           (cond (not workbench-full)
                 (do

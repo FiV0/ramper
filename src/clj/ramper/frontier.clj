@@ -211,3 +211,11 @@
                 (atom 0)
                 (atom 0)
                 (atom {}))))
+
+(defn stop?
+  "Returns true when the crawler should be stopped due to some stopping
+  conditions being met."
+  [runtime-config {:keys [urls-crawled] :as _frontier}]
+  (if (contains? @runtime-config :ramper/max-urls)
+    (> (:ramper/max-urls @runtime-config) @urls-crawled)
+    false))

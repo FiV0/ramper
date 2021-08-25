@@ -57,3 +57,8 @@
 (def stats-interval
   "The interval at which stats should be pushed to the stats thread."
   (.. TimeUnit/SECONDS (toMillis 10)))
+
+(def shutdown-check-interval
+  "The interval at which checks will be executed to check if the crawler
+  should be shutdown due to configuations."
+  (.. TimeUnit/SECONDS (toMillis 1)))

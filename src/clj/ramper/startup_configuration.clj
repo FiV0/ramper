@@ -34,7 +34,7 @@
                                       :ramper/ip-delay
                                       :ramper/is-new
                                       :ramper/keepalive-time
-                                      :ramper/max-urls
+                                      ;; :ramper/max-urls
                                       :ramper/max-urls-per-scheme+authority
                                       :ramper/parsing-threads
                                       :ramper/root-dir

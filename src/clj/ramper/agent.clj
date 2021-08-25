@@ -3,8 +3,8 @@
   (:refer-clojure :exclude [agent])
   (:require [clj-http.conn-mgr :as conn]
             [clojure.core.async :as async]
-            [clojure.java.io :as io]
             [io.pedestal.log :as log]
+            [ramper.constants :as constants]
             [ramper.frontier :as frontier]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.startup-configuration :as startup-config]
@@ -20,6 +20,8 @@
 
 ;; TODO check runtime-config from time to time to adapt thread counts
 ;; TODO refactor the below
+;; TODO should the terminating conditions be checked in all threads or in one loop
+;; that terminates the threads?
 (defn start-todo-thread [runtime-config frontier]
   (async/thread (todo-thread/todo-thread (assoc frontier :runtime-config runtime-config))))
 
@@ -31,8 +33,8 @@
                                                        :runtime-config runtime-config
                                                        :stats-chan stats-chan))))
 
-(defn start-stats-loop [stats-atom runtime-config stats-chan]
-  (stats/stats-loop stats-atom runtime-config stats-chan))
+(defn start-stats-loop [stats-atom runtime-config frontier stats-chan]
+  (stats/stats-loop stats-atom runtime-config frontier stats-chan))
 
 (defn start-dns-threads [runtime-config frontier]
   (let [{:ramper/keys [dns-threads]} @runtime-config]
@@ -56,7 +58,7 @@
     {:todo-thread (start-todo-thread runtime-config frontier)
      :done-thread (start-done-thread runtime-config frontier)
      :distributor (start-distributor-thread runtime-config frontier stats-chan)
-     :stats-loop (start-stats-loop stats/stats runtime-config stats-chan)
+     :stats-loop (start-stats-loop stats/stats runtime-config frontier stats-chan)
      :dns-threads-wrapped (start-dns-threads runtime-config
                                              (assoc frontier :dns-resolver dns-resolver))
      :fetching-threads-wrapped (start-fetching-threads runtime-config
@@ -81,26 +83,49 @@
   (when-not (every? #(thread-utils/stop %) parsing-threads-wrapped)
     (log/warn :non-proper-shutdown {:type :parsing-threads})))
 
-;; TODO is agent maybe already overloaded in Clojure
+(declare stop?)
+
+(defn shutdown-checking-loop [{:keys [runtime-config frontier] :as agent}]
+  (async/go-loop []
+    (if (frontier/stop? runtime-config frontier)
+      (do
+        (log/info :shutdown-condition-reached {:urls-crawled @(:urls-crawled frontier)})
+        (stop? agent))
+      (do (async/<! (async/timeout constants/shutdown-check-interval))
+          (recur)))))
+
+;; TODO the term agent might be overloaded in Clojure
 (defrecord Agent [runtime-config frontier threads])
 
-(defn agent [file]
-  (let [file (io/file file)]
+(defn agent
+  "Creates a ramper agent based on a startup config `file`."
+  [file]
+  (let [file (util/make-absolute file)]
     (when-not (.exists file)
       (throw (IllegalArgumentException. (str "config file: " file " does not exist!"))))
     (let [runtime-config (runtime-config/merge-startup-config
-                          (startup-config/read-config (util/make-absolute file))
+                          (startup-config/read-config file)
                           runtime-config/runtime-config)
           frontier (frontier/frontier @runtime-config)
-          threads (init-thraeds runtime-config frontier)]
-      (->Agent runtime-config frontier threads))))
+          threads (init-thraeds runtime-config frontier)
+          agent (->Agent runtime-config frontier threads)]
+      (shutdown-checking-loop agent)
+      agent)))
 
-(defn agent* []
-  (let [frontier (frontier/frontier @runtime-config/runtime-config)]
-    (->Agent runtime-config/runtime-config
-             frontier
-             (init-thraeds runtime-config/runtime-config frontier))))
+(defn agent*
+  "Creates a ramper agent based on a `runtime-config` atom."
+  [runtime-config]
+  (let [frontier (frontier/frontier runtime-config)
+        agent (->Agent runtime-config/runtime-config
+                       frontier
+                       (init-thraeds runtime-config/runtime-config frontier))]
+    (shutdown-checking-loop agent)
+    agent))
 
-(defn stop [{:keys [runtime-config threads] :as _agent}]
+(defn stop
+  "Stops an agent and cleans up the lingering threads if any."
+  [{:keys [runtime-config threads] :as _agent}]
   (swap! runtime-config :ramper/runtime-stop true)
+  ;; TODO move this cleanup stuff somewhere more consistent
+  (reset! stats/stats {})
   (cleanup-threads threads))
