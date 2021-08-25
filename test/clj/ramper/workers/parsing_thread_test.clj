@@ -101,9 +101,11 @@
                                    bytes-fetched-data
                                    links-fetched-data]))
         scheme+authority-to-count (atom {})
+        urls-crawled (atom 0)
         thread-data {:store store :sieve sieve :url-cache url-cache
                      :results-queue results-queue :runtime-config runtime-config
-                     :scheme+authority-to-count scheme+authority-to-count}
+                     :scheme+authority-to-count scheme+authority-to-count
+                     :urls-crawled urls-crawled}
         tw (thread-util/thread-wrapper (partial parsing-thread/parsing-thread thread-data 1))]
     (testing "parsing-thread"
       (Thread/sleep 1000)
@@ -125,6 +127,7 @@
              (repeatedly 4 #(receiver/dequeue-key receiver))))
       (is (= 2 (count @scheme+authority-to-count)))
       (is (= #{1 2} (set (vals @scheme+authority-to-count))))
+      (is (= 3 @urls-crawled))
       (.close store-reader))))
 
 (comment

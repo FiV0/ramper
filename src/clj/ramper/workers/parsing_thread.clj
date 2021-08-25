@@ -37,7 +37,7 @@
   :fetched-data - a response satisfying the spec :r.workers.fetched-data/fetched-data
 
   For the remaining keys see r.workers.parsing-thread/parsing-thread."
-  [{:keys [fetched-data store sieve url-cache
+  [{:keys [fetched-data store sieve url-cache urls-crawled
            scheme+authority-to-count runtime-config] :as _parsing-thread-data}]
   (let [{:keys [response url]} fetched-data
         ;; TODO add parsers here
@@ -52,6 +52,7 @@
                                           :exception-type (type e)})))]
     (when response
       (swap! scheme+authority-to-count update (url/scheme+authority url) (fnil inc 0))
+      (swap! urls-crawled inc)
       (store/store store url response))
     (doseq [url urls]
       (when-not (lru/check url-cache url)
@@ -86,8 +87,11 @@
   and stored for the corresponding scheme+authority.
 
   :results-queue - an atom wrapping clojure.lang.PersistentQueue from which
-  the fetched-data will be dequeued."
-  [{:keys [_store _sieve _url-cache _scheme+authority-to-count results-queue] :as thread-data}
+  the fetched-data will be dequeued.
+
+  :urls-crawled - an atom wrapping a counter of the total number of urls-crawled"
+  [{:keys [_store _sieve _url-cache _scheme+authority-to-count
+           results-queue _urls-crawled] :as thread-data}
    index stop-chan]
   (thread-utils/set-thread-name (str *ns* "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
