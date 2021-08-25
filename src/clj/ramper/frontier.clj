@@ -190,13 +190,14 @@
 (defn frontier
   "Creates a frontier initialized with all the data-structures used by an agent."
   [runtime-config]
-  (let [seed-urls (startup-config/read-urls (:ramper/seed-file runtime-config))
+  (let [seed-urls (startup-config/read-urls* (:ramper/seed-file runtime-config))
         url-cache (lru-immutable/create-lru-cache
                    (runtime-config/approximate-url-cache-threshold runtime-config)
                    url/hash-url-128)
         ready-urls (url-flow-receiver-init)
         sieve (sieve-init runtime-config ready-urls)]
-    (run! #(lru/add url-cache (uri/uri %)) seed-urls)
+    (run! #(lru/add url-cache %) seed-urls)
+    (run! #(sieve/enqueue sieve %) seed-urls)
     (->Frontier (atom clojure.lang.PersistentQueue/EMPTY)
                 (atom clojure.lang.PersistentQueue/EMPTY)
                 (atom clojure.lang.PersistentQueue/EMPTY)
