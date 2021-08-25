@@ -131,3 +131,12 @@
   ;; TODO move this cleanup stuff somewhere more consistent
   (reset! stats/stats {})
   (cleanup-threads threads))
+
+(comment
+  (require '[clojure.java.io :as io])
+  (swap! runtime-config/runtime-config :ramper/seed-file (io/file (io/resource "seed.txt")))
+
+  (s/valid? ::runtime-config/runtime-config @runtime-config/runtime-config)
+  (s/explain ::runtime-config/runtime-config @runtime-config/runtime-config)
+
+  (def my-agent (agent* runtime-config/runtime-config)))
