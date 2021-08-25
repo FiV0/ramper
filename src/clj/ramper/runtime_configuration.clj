@@ -5,9 +5,19 @@
   others are sensible defaults. Some can be modified via jmx methods
   at runtime."
   (:require [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
+            [ramper.startup-configuration :as startup-config]
             [ramper.util :as util]))
 
 (def ^:private root-dir (util/temp-dir "ramper-root"))
+
+(s/def ::runtime-config
+  (s/and ::startup-config/startup-config
+         (s/keys :req [:ramper/frontier-dir
+                       :ramper/required-front-size
+                       :ramper/runtime-pause
+                       :ramper/runtime-stop
+                       :ramper/store-dir])))
 
 ;; these are the default values when developing
 (def runtime-config (atom {:ramper/aux-buffer-size               (* 64 1024)
@@ -66,7 +76,8 @@
 (defn merge-startup-config
   "Merges a ramper.startup-configuration into a runtime-config atom."
   ([startup-config] (merge-startup-config startup-config runtime-config))
-  ([{:ramper/keys [root-dir] :as startup-config} runtime-config]
+  ([{:ramper/keys [root-dir init-front-size] :as startup-config} runtime-config]
+   {:post [(s/valid? ::runtime-config %)]}
    (let [frontier-dir (io/file root-dir "frontier")
          store-dir (io/file root-dir "store")]
      (when-not (.exists frontier-dir)
@@ -75,11 +86,11 @@
        (.mkdirs store-dir))
      (reset! runtime-config
              (merge startup-config
-                    {:ramper/is-new        true
-                     :ramper/frontier-dir  frontier-dir
-                     :ramper/runtime-pause false
-                     :ramper/runtime-stop  false
-                     :ramper/store-dir     store-dir})))))
+                    {:ramper/frontier-dir        frontier-dir
+                     :ramper/required-front-size init-front-size
+                     :ramper/runtime-pause       false
+                     :ramper/runtime-stop        false
+                     :ramper/store-dir           store-dir})))))
 
 (comment
   (.mkdirs (io/file (util/project-dir) "store"))

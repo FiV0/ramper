@@ -3,6 +3,7 @@
   (:refer-clojure :exclude [agent])
   (:require [clj-http.conn-mgr :as conn]
             [clojure.core.async :as async]
+            [clojure.spec.alpha :as s]
             [io.pedestal.log :as log]
             [ramper.constants :as constants]
             [ramper.frontier :as frontier]
@@ -115,6 +116,7 @@
 (defn agent*
   "Creates a ramper agent based on a `runtime-config` atom."
   [runtime-config]
+  {:pre [(s/valid? ::runtime-config/runtime-config @runtime-config)]}
   (let [frontier (frontier/frontier runtime-config)
         agent (->Agent runtime-config/runtime-config
                        frontier
