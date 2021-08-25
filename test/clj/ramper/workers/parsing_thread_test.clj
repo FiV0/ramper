@@ -33,11 +33,11 @@
         store-dir (util/temp-dir "simple-store")
         store (simple-store/simple-store store-dir)
         store-reader (simple-store/simple-store-reader store-dir)
-        receiver (receiver/disk-flow-receiver (serializer/string-byte-serializer))
+        receiver (receiver/disk-flow-receiver (url/url-byte-serializer))
         sieve (mercator-sieve/mercator-seive true (util/temp-dir "tmp-sieve") 128 32
-                                             32 receiver (serializer/string-byte-serializer)
-                                             (fn [x] (-> x hash long)))
-        url-cache (lru/create-lru-cache [html-url bytes-url links-url] 100 url/hash-url)
+                                             32 receiver (url/url-byte-serializer)
+                                             url/hash-url)
+        url-cache (lru/create-lru-cache [html-url bytes-url links-url] 100 url/hash-url-128)
         runtime-config (atom {:ramper/max-urls-per-scheme+authority 10})
         scheme+authority-to-count (atom {})
         urls-crawled (atom 0)
@@ -72,7 +72,7 @@
                  "https://finnvolkel.com/about/"
                  "https://finnvolkel.com/archive/"
                  "https://nextjournal.com/")
-               (repeatedly 4 #(receiver/dequeue-key receiver))))
+               (repeatedly 4 #(-> (receiver/dequeue-key receiver) str))))
         (is (= 2 (count @scheme+authority-to-count)))
         ;; two for httpbin.org, 1 finnvolkel.com
         (is (= #{1 2} (set (vals @scheme+authority-to-count))))
@@ -92,11 +92,11 @@
         store-dir (util/temp-dir "simple-store")
         store (simple-store/simple-store store-dir)
         store-reader (simple-store/simple-store-reader store-dir)
-        receiver (receiver/disk-flow-receiver (serializer/string-byte-serializer))
+        receiver (receiver/disk-flow-receiver (url/url-byte-serializer))
         sieve (mercator-sieve/mercator-seive true (util/temp-dir "tmp-sieve") 128 32
-                                             32 receiver (serializer/string-byte-serializer)
-                                             (fn [x] (-> x hash long)))
-        url-cache (lru/create-lru-cache [html-url bytes-url links-url] 100 url/hash-url)
+                                             32 receiver (url/url-byte-serializer)
+                                             url/hash-url)
+        url-cache (lru/create-lru-cache [html-url bytes-url links-url] 100 url/hash-url-128)
         runtime-config (atom {:ramper/max-urls-per-scheme+authority 10})
         results-queue (atom (into clojure.lang.PersistentQueue/EMPTY
                                   [html-fetched-data
@@ -126,7 +126,7 @@
                "https://finnvolkel.com/about/"
                "https://finnvolkel.com/archive/"
                "https://nextjournal.com/")
-             (repeatedly 4 #(receiver/dequeue-key receiver))))
+             (repeatedly 4 #(-> (receiver/dequeue-key receiver) str))))
       (is (= 2 (count @scheme+authority-to-count)))
       (is (= #{1 2} (set (vals @scheme+authority-to-count))))
       (is (= 3 @urls-crawled))

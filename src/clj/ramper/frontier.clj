@@ -6,6 +6,7 @@
             [ramper.frontier.workbench :as workbench]
             [ramper.frontier.workbench.virtualizer :as virtualizer]
             [ramper.runtime-configuration :as runtime-config]
+            [ramper.sieve :as sieve]
             [ramper.sieve.disk-flow-receiver :as receiver]
             [ramper.sieve.mercator-sieve :as mercator-sieve]
             [ramper.startup-configuration :as startup-config]
@@ -64,7 +65,7 @@
 (def url-cache
   "An url cache for the urls seen recently. This avoids overloading the sieve and
   catches (apparently) already 90% of duplicates."
-  (lru-immutable/create-lru-cache (runtime-config/approximate-url-cache-threshold) url/hash-url))
+  (lru-immutable/create-lru-cache (runtime-config/approximate-url-cache-threshold) url/hash-url-128))
 
 ;; TODO maybe move to ramper.workers.dns-resolving
 (def unknown-hosts
@@ -162,7 +163,7 @@
    ;; TODO find a more elegent way
    (alter-var-root #'url-cache (fn [_] (lru-immutable/create-lru-cache
                                         (runtime-config/approximate-url-cache-threshold runtime-config)
-                                        url/hash-url)))
+                                        url/hash-url-128)))
    (reset! unknown-hosts (delay-queue/delay-queue))
    (reset! new-visit-states clojure.lang.PersistentQueue/EMPTY)
    (reset! ready-urls (url-flow-receiver-init))
@@ -192,7 +193,7 @@
   (let [seed-urls (startup-config/read-urls (:ramper/seed-file runtime-config))
         url-cache (lru-immutable/create-lru-cache
                    (runtime-config/approximate-url-cache-threshold runtime-config)
-                   url/hash-url)
+                   url/hash-url-128)
         ready-urls (url-flow-receiver-init)
         sieve (sieve-init runtime-config ready-urls)]
     (run! #(lru/add url-cache (uri/uri %)) seed-urls)

@@ -118,7 +118,12 @@
   (apply str (take len (repeatedly #(char (+ (rand 26) 97))))))
 
 (defn hash-str
-  "Returns a 128 bit MurmurHash3 of `str`yielding a vector of two longs."
+  "Returns a 64 bit hash of `s`"
+  [s]
+  (-> s hash long))
+
+(defn hash-str-128
+  "Returns a 128 bit MurmurHash3 of `s` yielding a vector of two longs."
   [s]
   (vec (MurmurHash3/hash128 s)))
 

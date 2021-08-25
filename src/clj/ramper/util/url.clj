@@ -76,6 +76,12 @@
              :host (:host parent))))
 
 (defn hash-url
+  "Hashes a lambdaisland.uri.URI with standard clojure.core/hash."
+  [url]
+  {:pre [(instance? URI url)]}
+  (util/hash-str (str url)))
+
+(defn hash-url-128
   "Hashes a lambdaisland.uri.URI with the 128 bit MurmurHash3
   yielding a vector of two longs."
   [url]

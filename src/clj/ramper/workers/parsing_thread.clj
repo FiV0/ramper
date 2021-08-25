@@ -62,7 +62,7 @@
           ;; urls through the sieve.
           (when (< (get @scheme+authority-to-count scheme+authority 0)
                    (:ramper/max-urls-per-scheme+authority @runtime-config))
-            (sieve/enqueue sieve (str url))))))))
+            (sieve/enqueue sieve url)))))))
 
 (defn parsing-thread
   "Continuously dequeues fetched data from the results-queue and tries to parse

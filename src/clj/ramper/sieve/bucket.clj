@@ -2,14 +2,14 @@
   "A bucket that holds the current hashes and keys that still need to go through the sieve.
   See also `ramper.sieve.store.`"
   (:require [clojure.java.io :as io]
-            [ramper.sieve :refer [Size number-of-items]]
+            [ramper.sieve :refer [Size]]
             [ramper.util.byte-serializer :refer [from-stream to-stream skip]])
   (:import (it.unimi.dsi.fastutil.io FastBufferedInputStream FastBufferedOutputStream)
            (java.io FileInputStream FileOutputStream)))
 
 (defrecord Bucket [serializer items size buffer aux-file aux-in aux-out io-buffer]
   Size
-  (number-of-items [this] items))
+  (number-of-items [_this] items))
 
 (defn bucket
   "Creates a new bucket."
