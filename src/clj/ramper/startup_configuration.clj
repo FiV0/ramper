@@ -4,26 +4,43 @@
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
             [io.pedestal.log :as log]
+            [lambdaisland.uri :as uri]
             [ramper.util :as util]))
 
-(defn write-urls [seed-file urls]
+(defn write-urls
+  "Writes plain string `urls` to a `seed-file`."
+  [seed-file urls]
   (with-open [wrt (io/writer seed-file)]
     (doseq [url urls]
       (.write wrt url)
       (.write wrt "\n"))))
 
+(defn write-urls*
+  "Writes lambdaisland.uri.URI `urls` to a `seed-file`."
+  [seed-file urls]
+  (write-urls seed-file (map str urls)))
+
 ;; See also repl-sessions.url-extraction
 (comment
   (require '[repl-sessions.url-extraction :as urls])
   (write-urls (io/file "resources/seed.txt") (urls/get-urls))
-  )
+  (write-urls* (io/file "resources/seed.txt") (map uri/uri (urls/get-urls))))
 
-(defn read-urls [seed-file]
+(defn read-urls
+  "Reads urls as plain strings from a `seed-file`."
+  [seed-file]
   (with-open [rdr (io/reader seed-file)]
     (doall (line-seq rdr))))
 
+(defn read-urls*
+  "Read urls as lambdaisland.uri.URI's from a `seed-file`."
+  [seed-file]
+  (->> (read-urls seed-file)
+       (map uri/uri)))
+
 (comment
   (read-urls (io/resource "seed.txt") )
+  (read-urls* (io/resource "seed.txt") )
   )
 
 (s/def ::startup-config (s/keys :req [:ramper/aux-buffer-size
