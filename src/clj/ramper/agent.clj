@@ -1,6 +1,5 @@
 (ns ramper.agent
-  "This is the main entrypoint to the ramper crawler. It exposes on JMX a couple of
-  attributes and methods to tweak the crawler while running."
+  "This is the main entrypoint to the ramper crawler."
   (:refer-clojure :exclude [agent])
   (:require [clj-http.conn-mgr :as conn]
             [clojure.core.async :as async]
@@ -15,9 +14,9 @@
             [ramper.workers.distributor :as distributor]
             [ramper.workers.dns-resolving :as dns-resolving]
             [ramper.workers.done-thread :as done-thread]
-            [ramper.workers.todo-thread :as todo-thread]
             [ramper.workers.fetching-thread :as fetching-thread]
-            [ramper.workers.parsing-thread :as parsing-thread]))
+            [ramper.workers.parsing-thread :as parsing-thread]
+            [ramper.workers.todo-thread :as todo-thread]))
 
 ;; TODO check runtime-config from time to time to adapt thread counts
 ;; TODO refactor the below
@@ -32,8 +31,8 @@
                                                        :runtime-config runtime-config
                                                        :stats-chan stats-chan))))
 
-(defn start-stats-thread [stats-atom runtime-config stats-chan]
-  (async/thread (stats/stats-thread stats-atom runtime-config stats-chan)))
+(defn start-stats-loop [stats-atom runtime-config stats-chan]
+  (stats/stats-loop stats-atom runtime-config stats-chan))
 
 (defn start-dns-threads [runtime-config frontier]
   (let [{:ramper/keys [dns-threads]} @runtime-config]
@@ -57,14 +56,14 @@
     {:todo-thread (start-todo-thread runtime-config frontier)
      :done-thread (start-done-thread runtime-config frontier)
      :distributor (start-distributor-thread runtime-config frontier stats-chan)
-     :stats-thread (start-stats-thread stats/stats runtime-config stats-chan)
+     :stats-loop (start-stats-loop stats/stats runtime-config stats-chan)
      :dns-threads-wrapped (start-dns-threads runtime-config
                                              (assoc frontier :dns-resolver dns-resolver))
      :fetching-threads-wrapped (start-fetching-threads runtime-config
                                                        (assoc frontier :connection-manager conn-mgr))
      :parsing-threads-wrapped (start-parsing-threads runtime-config frontier)}))
 
-(defn cleanup-threads [{:keys [todo-thread done-thread distributor stats-thread
+(defn cleanup-threads [{:keys [todo-thread done-thread distributor stats-loop
                                dns-threads-wrapped fetching-threads-wrapped
                                parsing-threads-wrapped]}]
   (when-not (async/<!! todo-thread)
@@ -73,7 +72,7 @@
     (log/warn :non-proper-shutdown {:type :done-thread}))
   (when-not (async/<!! distributor)
     (log/warn :non-proper-shutdown {:type :distributor-thread}))
-  (when-not (async/<!! stats-thread)
+  (when-not (async/<!! stats-loop)
     (log/warn :non-proper-shutdown {:type :distributor-thread}))
   (when-not (every? #(thread-utils/stop %) dns-threads-wrapped)
     (log/warn :non-proper-shutdown {:type :dns-threads}))
