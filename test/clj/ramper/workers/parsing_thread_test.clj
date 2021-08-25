@@ -40,9 +40,10 @@
         url-cache (lru/create-lru-cache [html-url bytes-url links-url] 100 url/hash-url)
         runtime-config (atom {:ramper/max-urls-per-scheme+authority 10})
         scheme+authority-to-count (atom {})
+        urls-crawled (atom 0)
         thread-data {:store store :sieve sieve :url-cache url-cache
                      :scheme+authority-to-count  scheme+authority-to-count
-                     :runtime-config runtime-config}]
+                     :runtime-config runtime-config :urls-crawled urls-crawled}]
     (testing "with httpbin.org"
       (is (true? (s/valid? ::fetched-data/fetched-data html-fetched-data)))
       (is (true? (s/valid? ::fetched-data/fetched-data bytes-fetched-data)))
@@ -75,6 +76,7 @@
         (is (= 2 (count @scheme+authority-to-count)))
         ;; two for httpbin.org, 1 finnvolkel.com
         (is (= #{1 2} (set (vals @scheme+authority-to-count))))
+        (is (= 3 @urls-crawled))
         (.close store-reader)))))
 
 (deftest parsing-thread-test
