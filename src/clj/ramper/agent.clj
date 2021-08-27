@@ -40,12 +40,12 @@
 
 (defn start-dns-threads [runtime-config frontier]
   (let [{:ramper/keys [dns-threads]} @runtime-config]
-    (for [i (range dns-threads)]
+    (doseq [i (range dns-threads)]
       (thread-utils/thread-wrapper (partial dns-resolving/dns-thread frontier i)))))
 
 (defn start-fetching-threads [runtime-config frontier]
   (let [{:ramper/keys [fetching-threads]} @runtime-config]
-    (for [i (range fetching-threads)]
+    (doseq [i (range fetching-threads)]
       (thread-utils/thread-wrapper
        (partial fetching-thread/fetching-thread
                 (assoc frontier :runtime-config runtime-config)
@@ -53,7 +53,7 @@
 
 (defn start-parsing-threads [runtime-config frontier]
   (let [{:ramper/keys [parsing-threads]} @runtime-config]
-    (for [i (range parsing-threads)]
+    (doseq [i (range parsing-threads)]
       (thread-utils/thread-wrapper
        (partial parsing-thread/parsing-thread
                 (assoc frontier :runtime-config runtime-config)
