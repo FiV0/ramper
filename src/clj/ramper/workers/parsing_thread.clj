@@ -89,7 +89,9 @@
   :results-queue - an atom wrapping clojure.lang.PersistentQueue from which
   the fetched-data will be dequeued.
 
-  :urls-crawled - an atom wrapping a counter of the total number of urls-crawled"
+  :urls-crawled - an atom wrapping a counter of the total number of urls-crawled
+
+  :runtime-config - the runtime-config of the agent"
   [{:keys [_store _sieve _url-cache _scheme+authority-to-count
            results-queue _urls-crawled] :as thread-data}
    index stop-chan]

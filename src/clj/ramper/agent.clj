@@ -45,12 +45,18 @@
 (defn start-fetching-threads [runtime-config frontier]
   (let [{:ramper/keys [fetching-threads]} @runtime-config]
     (for [i (range fetching-threads)]
-      (thread-utils/thread-wrapper (partial fetching-thread/fetching-thread frontier i)))))
+      (thread-utils/thread-wrapper
+       (partial fetching-thread/fetching-thread
+                (assoc frontier :runtime-config runtime-config)
+                i)))))
 
 (defn start-parsing-threads [runtime-config frontier]
   (let [{:ramper/keys [parsing-threads]} @runtime-config]
     (for [i (range parsing-threads)]
-      (thread-utils/thread-wrapper (partial parsing-thread/parsing-thread frontier i)))))
+      (thread-utils/thread-wrapper
+       (partial parsing-thread/parsing-thread
+                (assoc frontier :runtime-config runtime-config)
+                i)))))
 
 (defn init-thraeds [runtime-config frontier]
   (let [stats-chan (async/chan (async/sliding-buffer 5))

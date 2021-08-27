@@ -180,12 +180,13 @@
   (thread-utils/set-thread-name (str *ns* "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
   ;; TODO check if cookie store should be added via HttpClientBuilder
-  (let [cookie-store (cookies/cookie-store)
-        ip-delay (:ramper/ip-delay @runtime-config)
-        http-client (core/build-http-client {:http-builder-fns [set-connection-reuse]}
-                                            false connection-manager)
-        cookies-max-byte-size (:ramper/cookies-max-byte-size @runtime-config)]
-    (try
+  (try
+    (let [cookie-store (cookies/cookie-store)
+          ip-delay (:ramper/ip-delay @runtime-config)
+          http-client (core/build-http-client {:http-builder-fns [set-connection-reuse]}
+                                              false connection-manager)
+          cookies-max-byte-size (:ramper/cookies-max-byte-size @runtime-config)]
+
       (loop [i 0 wait-time 0]
         (when-not (async/poll! stop-chan)
           (if-let [visit-state (pq/dequeue! todo-queue)]
@@ -234,10 +235,9 @@
                                             (update @runtime-config :ramper/required-front-size + front-increase))
                           (assoc :front-increase front-increase)))
               (Thread/sleep time)
-              (recur (inc i) (+ wait-time time))))))
-
-      (catch Throwable t
-        (log/error :unexpected-ex {:ex t}))))
+              (recur (inc i) (+ wait-time time)))))))
+    (catch Throwable t
+      (log/error :unexpected-ex {:ex t})))
   (log/info :graceful-shutdown {:type :fetching-thread
                                 :index index})
   true)
