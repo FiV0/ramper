@@ -62,15 +62,16 @@
 (defn init-thraeds [runtime-config frontier]
   (let [stats-chan (async/chan (async/sliding-buffer 5))
         dns-resolver (dns-resolving/global-java-dns-resolver)
-        conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})]
+        conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
+        frontier (assoc frontier
+                        :dns-resolver dns-resolver
+                        :connection-manager conn-mgr)]
     {:todo-thread (start-todo-thread runtime-config frontier)
      :done-thread (start-done-thread runtime-config frontier)
      :distributor (start-distributor-thread runtime-config frontier stats-chan)
      :stats-loop (start-stats-loop stats/stats runtime-config frontier stats-chan)
-     :dns-threads-wrapped (doall (start-dns-threads runtime-config
-                                                    (assoc frontier :dns-resolver dns-resolver)))
-     :fetching-threads-wrapped (doall (start-fetching-threads runtime-config
-                                                              (assoc frontier :connection-manager conn-mgr)))
+     :dns-threads-wrapped (doall (start-dns-threads runtime-config frontier))
+     :fetching-threads-wrapped (doall (start-fetching-threads runtime-config frontier))
      :parsing-threads-wrapped (doall (start-parsing-threads runtime-config frontier))}))
 
 (defn cleanup-threads [{:keys [todo-thread done-thread distributor stats-loop
