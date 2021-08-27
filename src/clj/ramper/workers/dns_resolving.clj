@@ -100,9 +100,10 @@
                       (log/info :retry-dns-resolution {:delay delay :visit-state visit-state})
                       (swap! unknown-hosts conj [visit-state next-fetch])))
                   ;; o/w the visit-state gets purged by garbage collection
-                  ))))
-          (recur))))
+                  )))))
+        (recur)))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
-  (log/info :graceful-shutdown {:index index})
+  (log/info :graceful-shutdown {:type :dns-thread
+                                :index index})
   true)
