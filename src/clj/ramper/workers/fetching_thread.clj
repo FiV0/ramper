@@ -143,6 +143,8 @@
             (recur cookies (conj res cookie) total-size)
             res)))))
 
+(def ^:private the-ns-name (str *ns*))
+
 (defn fetching-thread
   "Continuously tries to take visit-states from a todo-queue and tries to fetch as many
   resources as allowed in the keep-alive time of the runtime config. Pushes fetched
@@ -177,7 +179,7 @@
   [{:keys [connection-manager results-queue workbench
            runtime-config todo-queue done-queue] :as thread-data}
    index stop-chan]
-  (thread-utils/set-thread-name (str *ns* "-" index))
+  (thread-utils/set-thread-name (str the-ns-name "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
   ;; TODO check if cookie store should be added via HttpClientBuilder
   (try

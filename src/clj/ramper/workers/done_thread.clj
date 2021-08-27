@@ -7,6 +7,8 @@
             [ramper.util.persistent-queue :as pq]
             [ramper.util.thread :as thread-utils]))
 
+(def ^:private the-ns-name (str *ns*))
+
 (defn done-thread
   "Moves visit states from the done queue to the workbench or the
   refill queue. If no more path queries (urls) are available purges
@@ -29,7 +31,7 @@
   ramper.frontier.workbench.virtualizer"
   [{:keys [runtime-config workbench done-queue
            refill-queue virtualizer] :as _thread_data}]
-  (thread-utils/set-thread-name (str *ns*))
+  (thread-utils/set-thread-name the-ns-name)
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
     (loop [i 0]

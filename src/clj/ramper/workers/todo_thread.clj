@@ -4,6 +4,8 @@
             [ramper.runtime-configuration :as runtime-config]
             [ramper.util.thread :as thread-utils]))
 
+(def ^:private the-ns-name (str *ns*))
+
 (defn todo-thread
   "This function executes the logic of moving visit-states from the
   workbench to the todo-queue.
@@ -22,7 +24,7 @@
   number of path queries that have passed through the workbench"
   [{:keys [runtime-config workbench
            todo-queue scheme+authority-to-count] :as _thread_data}]
-  (thread-utils/set-thread-name (str *ns*))
+  (thread-utils/set-thread-name the-ns-name)
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
     (while (not (runtime-config/stop? @runtime-config))

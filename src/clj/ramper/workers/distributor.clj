@@ -69,6 +69,8 @@
         (swap! new-visit-states #(into % (vals scheme+authority-to-new-visit-states)))
         stats))))
 
+(def ^:private the-ns-name (str *ns*))
+
 (defn distributor-thread
   "The distributor thread takes care of refilling the workbench, passing new
   visit states to the dns threads and adding urls to the virtualizer.
@@ -105,7 +107,7 @@
            virtualizer sieve runtime-config ready-urls
            _scheme+authority-to-count _new-visit-states
            path-queries-in-queues stats-chan] :as thread-data}]
-  (thread-utils/set-thread-name (str *ns*))
+  (thread-utils/set-thread-name the-ns-name)
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
     (loop [round 0 stats {:moved-from-queues         0

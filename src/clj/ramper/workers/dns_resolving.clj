@@ -65,10 +65,12 @@
        (deleteHost [_ host]
          (swap! global-host-map dissoc host))))))
 
+(def ^:private the-ns-name (str *ns*))
+
 (defn dns-thread [{:keys [dns-resolver workbench unknown-hosts
                           new-visit-states] :as _thread-data}
                   index stop-chan]
-  (thread-utils/set-thread-name (str *ns* "-" index))
+  (thread-utils/set-thread-name (str the-ns-name "-" index))
   (try
     (loop [i 0]
       (when-not (async/poll! stop-chan)

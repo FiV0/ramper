@@ -64,6 +64,8 @@
                    (:ramper/max-urls-per-scheme+authority @runtime-config))
             (sieve/enqueue sieve url)))))))
 
+(def ^:private the-ns-name (str *ns*))
+
 (defn parsing-thread
   "Continuously dequeues fetched data from the results-queue and tries to parse
   and store the results. Potentially enqueuing new found url to the sieve.
@@ -95,7 +97,7 @@
   [{:keys [_store _sieve _url-cache _scheme+authority-to-count
            results-queue _urls-crawled] :as thread-data}
    index stop-chan]
-  (thread-utils/set-thread-name (str *ns* "-" index))
+  (thread-utils/set-thread-name (str the-ns-name "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
   (try
     (loop [i 0]
