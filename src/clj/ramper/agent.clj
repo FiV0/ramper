@@ -40,12 +40,12 @@
 
 (defn start-dns-threads [runtime-config frontier]
   (let [{:ramper/keys [dns-threads]} @runtime-config]
-    (doseq [i (range dns-threads)]
+    (for [i (range dns-threads)]
       (thread-utils/thread-wrapper (partial dns-resolving/dns-thread frontier i)))))
 
 (defn start-fetching-threads [runtime-config frontier]
   (let [{:ramper/keys [fetching-threads]} @runtime-config]
-    (doseq [i (range fetching-threads)]
+    (for [i (range fetching-threads)]
       (thread-utils/thread-wrapper
        (partial fetching-thread/fetching-thread
                 (assoc frontier :runtime-config runtime-config)
@@ -53,7 +53,7 @@
 
 (defn start-parsing-threads [runtime-config frontier]
   (let [{:ramper/keys [parsing-threads]} @runtime-config]
-    (doseq [i (range parsing-threads)]
+    (for [i (range parsing-threads)]
       (thread-utils/thread-wrapper
        (partial parsing-thread/parsing-thread
                 (assoc frontier :runtime-config runtime-config)
@@ -67,11 +67,11 @@
      :done-thread (start-done-thread runtime-config frontier)
      :distributor (start-distributor-thread runtime-config frontier stats-chan)
      :stats-loop (start-stats-loop stats/stats runtime-config frontier stats-chan)
-     :dns-threads-wrapped (start-dns-threads runtime-config
-                                             (assoc frontier :dns-resolver dns-resolver))
-     :fetching-threads-wrapped (start-fetching-threads runtime-config
-                                                       (assoc frontier :connection-manager conn-mgr))
-     :parsing-threads-wrapped (start-parsing-threads runtime-config frontier)}))
+     :dns-threads-wrapped (doall (start-dns-threads runtime-config
+                                                    (assoc frontier :dns-resolver dns-resolver)))
+     :fetching-threads-wrapped (doall (start-fetching-threads runtime-config
+                                                              (assoc frontier :connection-manager conn-mgr)))
+     :parsing-threads-wrapped (doall (start-parsing-threads runtime-config frontier))}))
 
 (defn cleanup-threads [{:keys [todo-thread done-thread distributor stats-loop
                                dns-threads-wrapped fetching-threads-wrapped
