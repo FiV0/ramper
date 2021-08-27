@@ -60,5 +60,5 @@
             (recur (inc i))))))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
-  (log/info :todo-thread :graceful-shutdown)
+  (log/info :done-thread :graceful-shutdown)
   true)

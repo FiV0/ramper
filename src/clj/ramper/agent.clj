@@ -76,7 +76,7 @@
   (when-not (async/<!! distributor)
     (log/warn :non-proper-shutdown {:type :distributor-thread}))
   (when-not (async/<!! stats-loop)
-    (log/warn :non-proper-shutdown {:type :distributor-thread}))
+    (log/warn :non-proper-shutdown {:type :stats-loop}))
   (when-not (every? #(thread-utils/stop %) dns-threads-wrapped)
     (log/warn :non-proper-shutdown {:type :dns-threads}))
   (when-not (every? #(thread-utils/stop %) fetching-threads-wrapped)
