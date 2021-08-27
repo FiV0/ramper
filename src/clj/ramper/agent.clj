@@ -117,7 +117,7 @@
   "Creates a ramper agent based on a `runtime-config` atom."
   [runtime-config]
   {:pre [(s/valid? ::runtime-config/runtime-config @runtime-config)]}
-  (let [frontier (frontier/frontier runtime-config)
+  (let [frontier (frontier/frontier @runtime-config)
         agent (->Agent runtime-config/runtime-config
                        frontier
                        (init-thraeds runtime-config/runtime-config frontier))]
@@ -127,16 +127,7 @@
 (defn stop
   "Stops an agent and cleans up the lingering threads if any."
   [{:keys [runtime-config threads] :as _agent}]
-  (swap! runtime-config :ramper/runtime-stop true)
+  (swap! runtime-config assoc :ramper/runtime-stop true)
   ;; TODO move this cleanup stuff somewhere more consistent
   (reset! stats/stats {})
   (cleanup-threads threads))
-
-(comment
-  (require '[clojure.java.io :as io])
-  (swap! runtime-config/runtime-config :ramper/seed-file (io/file (io/resource "seed.txt")))
-
-  (s/valid? ::runtime-config/runtime-config @runtime-config/runtime-config)
-  (s/explain ::runtime-config/runtime-config @runtime-config/runtime-config)
-
-  (def my-agent (agent* runtime-config/runtime-config)))

@@ -11,9 +11,9 @@
   (async/go
     (try
       (while (not (runtime-config/stop? @runtime-config))
-        (when-let [new-stats (async/<! stats-chan)]
-          (swap! stats merge new-stats {:urls-crawled @urls-crawled})
-          (async/<! (async/timeout constants/stats-interval))))
+        (let [[new-stats ch] (async/alts! [stats-chan (async/timeout constants/stats-interval)])]
+          (when (= ch stats-chan)
+            (swap! stats merge new-stats {:urls-crawled @urls-crawled}))))
       (catch Throwable t
         (log/error :unexpected-ex {:ex t})))
     (log/info :graceful-shutdown {:type :stats-thread})

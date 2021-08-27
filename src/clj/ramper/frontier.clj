@@ -94,7 +94,7 @@
   ([] (sieve-init @runtime-config/runtime-config @ready-urls))
   ([runtime-config receiver]
    (mercator-sieve/mercator-seive
-    true
+    (:ramper/is-new runtime-config)
     (runtime-config/sieve-dir runtime-config)
     (:ramper/sieve-size runtime-config)
     (:ramper/store-buffer-size runtime-config)
