@@ -22,33 +22,48 @@
        (.mkdirs store-dir))
      (swap! runtime-config assoc
             :ramper/root-dir root-dir
-            :ramper/frontier frontier-dir
-            :ramper/store-dir store-dir))))
+            :ramper/frontier-dir frontier-dir
+            :ramper/store-dir store-dir
+            :ramper/runtime-stop false))))
 
 (def my-startup-config {:ramper/seed-file (io/resource "seed.txt")
                         :ramper/init-front-size 1000})
 
-(swap! runtime-config/runtime-config merge my-startup-config)
+(def my-runtime-config (atom {:ramper/aux-buffer-size               (* 64 1024)
+                              :ramper/cookies-max-byte-size         2048
+                              :ramper/dns-threads                   1
+                              :ramper/fetching-threads              1
+                              :ramper/ip-delay                      2000 ;2 seconds
+                              :ramper/is-new                        true
+                              :ramper/keepalive-time                2000
+                              :ramper/max-urls-per-scheme+authority 500
+                              ;; Current estimation of the size of the front in ip addresses. Adaptively
+                              ;; increased by the fetching threads whenever they have to wait to retrieve
+                              ;; a visit state from the todo queue.
+                              :ramper/parsing-threads               1
+                              :ramper/required-front-size           1000
+                              :ramper/runtime-pause                 false
+                              :ramper/runtime-stop                  false
+                              :ramper/scheme+authority-delay        2000 ;2 seconds
+                              :ramper/sieve-size                    (* 64 1024)
+                              :ramper/store-buffer-size             (* 64 1024)
+                              :ramper/url-cache-max-byte-size       (* 1024 1024 1024)
+                              :ramper/user-agent                    "ramper"
+                              :ramper/workbench-max-byte-size       (* 512 1024 1024)}))
 
-(:ramper/seed-file @runtime-config/runtime-config)
-(:ramper/is-new @runtime-config/runtime-config)
+(swap! my-runtime-config merge my-startup-config)
 
-(runtime-config/reinit-runtime-config)
+(swap! my-runtime-config assoc :ramper/runtime-stop true)
+(swap! my-runtime-config assoc :ramper/runtime-stop false)
 
-(def my-frontier (frontier/frontier @runtime-config/runtime-config))
+(s/valid? ::runtime-config/runtime-config @my-runtime-config)
+(s/explain ::runtime-config/runtime-config @my-runtime-config)
 
-(agent/start-stats-loop stats/stats
-                        runtime-config/runtime-config
-                        my-frontier
-                        (async/chan))
+(reinit-runtime-config my-runtime-config)
 
-(swap! runtime-config/runtime-config assoc :ramper/runtime-stop true)
-(swap! runtime-config/runtime-config assoc :ramper/runtime-stop false)
+@stats/stats
 
-(s/valid? ::runtime-config/runtime-config @runtime-config/runtime-config)
-(s/explain ::runtime-config/runtime-config @runtime-config/runtime-config)
-
-(def my-agent (agent/agent* runtime-config/runtime-config))
+(def my-agent (agent/agent* my-runtime-config))
 (agent/stop my-agent)
 
 (thread-utils/get-threads "ramper.s")

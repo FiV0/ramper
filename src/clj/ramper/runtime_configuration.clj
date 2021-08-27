@@ -29,16 +29,16 @@
                            :ramper/is-new                        true
                            :ramper/keepalive-time                2000
                            :ramper/max-urls-per-scheme+authority 500
+                           :ramper/parsing-threads               2
                            ;; Current estimation of the size of the front in ip addresses. Adaptively
                            ;; increased by the fetching threads whenever they have to wait to retrieve
                            ;; a visit state from the todo queue.
-                           :ramper/parsing-threads               2
                            :ramper/required-front-size           1000
                            :ramper/root-dir                      root-dir
                            :ramper/runtime-pause                 false
                            :ramper/runtime-stop                  false
                            :ramper/scheme+authority-delay        2000 ;2 seconds
-                           :ramper/sieve-size                    (* 64 1024 1024)
+                           :ramper/sieve-size                    (* 64 1024) #_(* 64 1024 1024)
                            ;; TODO for now, as otherwise stuff fails on CircleCI
                            :ramper/store-dir                     (util/temp-dir "store")
                            :ramper/store-buffer-size             (* 64 1024)

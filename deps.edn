@@ -8,7 +8,7 @@
   org.clojure/core.match         {:mvn/version "1.0.0"} ;currently not used
   org.clojure/data.priority-map  {:mvn/version "1.0.0"}
   org.clojure/math.numeric-tower {:mvn/version "0.0.4"}
-  org.clojure/java.jmx           {:mvn/version "1.0.0"}
+  org.clojure/java.jmx           {:mvn/version "1.0.0"} ;currently not used
   it.unimi.dsi/dsiutils          {:mvn/version "2.6.17"}
   it.unimi.dsi/fastutil          {:mvn/version "8.5.4"}
 
@@ -60,7 +60,7 @@
                 cheshire/cheshire {:mvn/version "5.10.0"}}
    :jvm-opts ["-Xverify:none"
               "-Xss512k" ;; stack size
-              "-Xms5g"   ;; initial memory allocation pool
+              "-Xms10g"   ;; initial memory allocation pool
               "-XX:+UseNUMA"
               "-Djavax.net.ssl.sessionCacheSize=8192"
               "-XX:+UseTLAB"
