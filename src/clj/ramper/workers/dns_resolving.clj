@@ -32,7 +32,7 @@
       (if-let [address (get host-map hostname)]
         (into-array [(InetAddress/getByAddress hostname address)])
         (cond
-          (= "localhost" hostname) loopback
+          (= "localhost" hostname) (into-array [loopback])
           (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
           :else (let [hostname (if (str/ends-with? hostname ".") hostname (str hostname "."))]
                   (Address/getAllByName hostname))))))))
@@ -53,7 +53,7 @@
         (if-let [address (get @global-host-map hostname)]
           (into-array [(InetAddress/getByAddress hostname address)])
           (cond
-            (= "localhost" hostname) loopback
+            (= "localhost" hostname) (into-array [loopback])
             (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
             :else (let [hostname (if (str/ends-with? hostname ".") hostname (str hostname "."))]
                     (Address/getAllByName hostname)))))
@@ -70,38 +70,45 @@
                   index stop-chan]
   (thread-utils/set-thread-name (str *ns* "-" index))
   (try
-    (loop []
+    (loop [i 0]
       (when-not (async/poll! stop-chan)
         ;; maybe add a timeout somewhere as this otherwise might put
         ;; too much pressure on new-visit-states
-        (when-let [{:keys [retries] :as visit-state} (or (delay-queue/dequeue! unknown-hosts)
-                                                         (pq/dequeue! new-visit-states))]
-          (let [host (-> visit-state :scheme+authority uri/uri :host)]
-            (try
-              ;; TODO should we maybe store InetAddress4 format?
-              (let [ip-address (-> (.resolve dns-resolver host) first .getAddress)]
-                (swap! workbench workbench/add-visit-state (-> visit-state
-                                                               (assoc :ip-address ip-address)
-                                                               (assoc :last-exception nil))))
-              (catch UnknownHostException _e
-                (log/warn :unknown-host-ex {:host host
-                                            :visit-state visit-state})
-                (let [{:keys [retries] :as visit-state}
-                      (-> visit-state
-                          (assoc :retries
-                                 (if (= (:last-exception visit-state) UnknownHostException)
-                                   (inc retries)
-                                   0))
-                          (assoc :last-exception UnknownHostException))]
-                  (when (< retries (constants/get-exception-to-max-retries UnknownHostException))
-                    (let [delay (bit-shift-left (constants/get-exception-to-wait-time UnknownHostException) retries)
-                          next-fetch (util/from-now delay)
-                          visit-state (assoc visit-state :next-fetch next-fetch)]
-                      (log/info :retry-dns-resolution {:delay delay :visit-state visit-state})
-                      (swap! unknown-hosts conj [visit-state next-fetch])))
-                  ;; o/w the visit-state gets purged by garbage collection
-                  )))))
-        (recur)))
+        (if-let [{:keys [retries] :as visit-state} (or (delay-queue/dequeue! unknown-hosts)
+                                                       (pq/dequeue! new-visit-states))]
+          (do
+            (log/trace :dns-thread {:host (-> visit-state :scheme+authority uri/uri :host)})
+            (let [host (-> visit-state :scheme+authority uri/uri :host)]
+              (try
+                ;; TODO should we maybe store InetAddress4 format?
+                (let [ip-address (-> (.resolve dns-resolver host) first .getAddress)]
+                  (swap! workbench workbench/add-visit-state (-> visit-state
+                                                                 (assoc :ip-address ip-address)
+                                                                 (assoc :last-exception nil))))
+                (catch UnknownHostException _e
+                  (log/warn :unknown-host-ex {:host host
+                                              :visit-state visit-state})
+                  (let [{:keys [retries] :as visit-state}
+                        (-> visit-state
+                            (assoc :retries
+                                   (if (= (:last-exception visit-state) UnknownHostException)
+                                     (inc retries)
+                                     0))
+                            (assoc :last-exception UnknownHostException))]
+                    (when (< retries (constants/get-exception-to-max-retries UnknownHostException))
+                      (let [delay (bit-shift-left (constants/get-exception-to-wait-time UnknownHostException) retries)
+                            next-fetch (util/from-now delay)
+                            visit-state (assoc visit-state :next-fetch next-fetch)]
+                        (log/info :retry-dns-resolution {:delay delay :visit-state visit-state})
+                        (swap! unknown-hosts conj [visit-state next-fetch])))
+                    ;; o/w the visit-state gets purged by garbage collection
+                    ))))
+            (recur 0))
+          (let [time (bit-shift-left 1 (max 10 i))]
+            (log/info :dns-thread {:sleep-time time
+                                   :index index})
+            (Thread/sleep time)
+            (recur (inc i))))))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
   (log/info :graceful-shutdown {:type :dns-thread

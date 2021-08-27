@@ -230,7 +230,8 @@
 
             (let [time (bit-shift-left 1 (max 10 i))]
               (log/info :fetching-thread
-                        (cond-> {:sleep-time time}
+                        (cond-> {:sleep-time time
+                                 :index index}
                           (compare-and-set! runtime-config @runtime-config
                                             (update @runtime-config :ramper/required-front-size + front-increase))
                           (assoc :front-increase front-increase)))
