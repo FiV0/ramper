@@ -98,6 +98,7 @@
 ;; TODO the term agent might be overloaded in Clojure
 (defrecord Agent [runtime-config frontier threads])
 
+;; TODO bring some better sturcture to this function, currently all over the place
 (defn agent
   "Creates a ramper agent based on a startup config `file`."
   [file]
@@ -118,9 +119,7 @@
   [runtime-config]
   {:pre [(s/valid? ::runtime-config/runtime-config @runtime-config)]}
   (let [frontier (frontier/frontier @runtime-config)
-        agent (->Agent runtime-config/runtime-config
-                       frontier
-                       (init-thraeds runtime-config/runtime-config frontier))]
+        agent (->Agent runtime-config frontier (init-thraeds runtime-config frontier))]
     (shutdown-checking-loop agent)
     agent))
 
