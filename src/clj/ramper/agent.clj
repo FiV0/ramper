@@ -23,6 +23,7 @@
 ;; TODO refactor the below
 ;; TODO should the terminating conditions be checked in all threads or in one loop
 ;; that terminates the threads?
+;; TODO cleanup confusing runtime-config as atom and as non atom approach
 (defn start-todo-thread [runtime-config frontier]
   (async/thread (todo-thread/todo-thread (assoc frontier :runtime-config runtime-config))))
 
@@ -94,12 +95,16 @@
 
 (defn shutdown-checking-loop [{:keys [runtime-config frontier] :as agent}]
   (async/go-loop []
-    (if (frontier/stop? runtime-config frontier)
-      (do
-        (log/info :shutdown-condition-reached {:urls-crawled @(:urls-crawled frontier)})
-        (stop? agent))
-      (do (async/<! (async/timeout constants/shutdown-check-interval))
-          (recur)))))
+    (async/<! (async/timeout constants/shutdown-check-interval))
+    (cond
+      ;; stopped from externally
+      (runtime-config/stop? @runtime-config)
+      (log/info :graceful-shutdown {:type :shutdown-checking-loop})
+      ;; reached a stopping condition
+      (frontier/stop? runtime-config frontier)
+      (do (log/info :shutdown-condition-reached {:urls-crawled @(:urls-crawled frontier)})
+          (stop? agent))
+      :else (recur))))
 
 ;; TODO the term agent might be overloaded in Clojure
 (defrecord Agent [runtime-config frontier threads])
