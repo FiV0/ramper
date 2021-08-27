@@ -183,7 +183,7 @@
    (<= (runtime-config/workbench-size-in-path-queries runtime-config) path-queries-in-queues)))
 
 (defrecord Frontier [refill-queue done-queue todo-queue results-queue
-                     workbench virtualizer url-cache unkonwn-hosts
+                     workbench virtualizer url-cache unknown-hosts
                      new-visit-states ready-urls sieve store
                      path-queries-in-queues urls-crawled scheme+authority-to-count])
 
