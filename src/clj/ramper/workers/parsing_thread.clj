@@ -108,7 +108,7 @@
               (recur 0))
           (let [time (bit-shift-left 1 (max 10 i))]
             (Thread/sleep time)
-            (log/info :fetching-thread {:sleep-time time})
+            (log/info :parsing-thread {:sleep-time time})
             (recur (inc i))))))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))

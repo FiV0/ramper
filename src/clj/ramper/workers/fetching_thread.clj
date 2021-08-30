@@ -114,7 +114,7 @@
               [nil visit-state true]))))
       ;; bad exception case
       (catch Exception should-not-happen
-        (log/error :unexpected-ex {:ex should-not-happen})
+        (log/error :unexpected-ex {:url url :ex should-not-happen})
         ;; we return the visit-state as is, but with no exception set
         ;; this really should not happen
         (let [now (System/currentTimeMillis)
