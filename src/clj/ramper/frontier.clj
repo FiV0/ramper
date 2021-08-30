@@ -55,11 +55,14 @@
 (defn workbench-virtualizer-init
   ([] (workbench-virtualizer-init @runtime-config/runtime-config))
   ([runtime-config]
-   (virtualizer/workbench-virtualizer (frontier-subdir runtime-config "virtualizer"))))
+   (let [virtualizer-subdir (frontier-subdir runtime-config "virtualizer")]
+     (when-not (.exists virtualizer-subdir)
+       (.mkdirs virtualizer-subdir))
+     (virtualizer/workbench-virtualizer virtualizer-subdir))))
 
 (def workbench-virtualizer
   "The virtualizer for the workbench."
-  (atom (workbench-virtualizer-init)))
+  (atom nil #_(workbench-virtualizer-init)))
 
 ;; TODO add init urls to cache
 (def url-cache
@@ -88,7 +91,7 @@
 
   Should implement `ramper.sieve.flow-receiver.FlowReceiver` as well as (for now)
   `ramper.sieve.disk-flow-receiver.DiskFlowReceiverDequeue`"
-  (atom (url-flow-receiver-init)))
+  (atom nil #_(url-flow-receiver-init)))
 
 (defn- sieve-init
   ([] (sieve-init @runtime-config/runtime-config @ready-urls))
@@ -105,7 +108,7 @@
 
 (def sieve
   "An url sieve implementing `ramper.sieve.Sieve`."
-  (atom (sieve-init)))
+  (atom nil #_(sieve-init)))
 
 (defn- store-init
   ([] (store-init @runtime-config/runtime-config))
@@ -118,7 +121,7 @@
 (def store
   "A response store that must implement ramper.store/Store and probably should implement
   ramper.store/StoreReader."
-  (atom (store-init)))
+  (atom nil #_(store-init)))
 
 (defn- data-disk-queues-init [name]
   (ddq/data-disk-queues (io/file (:ramper/frontier-dir @runtime-config/runtime-config) name)))
@@ -126,7 +129,7 @@
 ;; TODO not used for now
 (def received-urls
   "A (probably disk-based) queue to store urls coming from different agents."
-  (atom (data-disk-queues-init "received")))
+  (atom nil #_(data-disk-queues-init "received")))
 
 (def path-queries-in-queues
   "The overall number of path queries stored in visit-state queues."
