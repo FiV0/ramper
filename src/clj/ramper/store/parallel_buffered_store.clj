@@ -56,8 +56,10 @@
    (let [store-file (io/file dir store/store-name)]
      (cond
        (and is-new (.exists store-file) (not (zero? (.length store-file))))
-       (throw (IOException. (str "Store exists and it is not empty, but the crawl"
-                                 "is new; it will not be overwritten: " store-file)))
+       ;; TODO readd this when finished testing
+       #_(throw (IOException. (str "Store exists and it is not empty, but the crawl"
+                                   "is new; it will not be overwritten: " store-file)))
+       (do (.delete store-file) (parallel-buffered-store dir is-new buffer-size))
 
        (and (not is-new) (not (.exists store-file)))
        (throw (IOException. (str "Store does not exist, but the crawl is not "

@@ -19,7 +19,11 @@
   "Creates a new store."
   [new sieve-dir sieve-name buffer-size]
   (let [name (io/file sieve-dir sieve-name)]
-    (when (and new (not (.createNewFile name))) (throw (IOException. (str "Sieve store " name " exists"))))
+    ;; TODO readd this when finished testing
+    #_(when (and new (not (.createNewFile name))) (throw (IOException. (str "Sieve store " name " exists"))))
+    (when (and new (not (.createNewFile name)))
+      (.delete name)
+      (.createNewFile name))
     (when (and (not new) (not (.exists name))) (throw (IOException. (str "Sieve store " name " does not exist"))))
     (->Store name
              (io/file sieve-dir (str sieve-name "~"))
