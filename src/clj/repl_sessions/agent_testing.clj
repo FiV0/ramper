@@ -13,7 +13,8 @@
   "For testing purposes only."
   ([] (reinit-runtime-config runtime-config/runtime-config))
   ([runtime-config]
-   (let [root-dir (util/temp-dir "ramper-root")
+   (let [{:ramper/keys [root-dir]} @runtime-config
+         root-dir (or root-dir (util/temp-dir "ramper-root"))
          frontier-dir (io/file root-dir "frontier")
          store-dir (io/file root-dir "store")]
      (when-not (.exists frontier-dir)
@@ -49,7 +50,8 @@
                               :ramper/store-buffer-size             (* 64 1024)
                               :ramper/url-cache-max-byte-size       (* 1024 1024 1024)
                               :ramper/user-agent                    "ramper"
-                              :ramper/workbench-max-byte-size       (* 512 1024 1024)}))
+                              :ramper/workbench-max-byte-size       (* 512 1024 1024)
+                              :ramper/root-dir (util/make-absolute "test-crawl")}))
 
 (swap! my-runtime-config merge my-startup-config)
 
@@ -65,6 +67,16 @@
 
 (def my-agent (agent/agent* my-runtime-config))
 (agent/stop my-agent)
+
+(require '[ramper.frontier.workbench.visit-state :as visit-state]
+         '[ramper.frontier.workbench.virtualizer :as virtual]
+         '[ramper.util.url :as url])
+
+(def my-virtual (-> my-agent :frontier :virtualizer))
+(def url "https://github.com/jvm-profiling-tools/async-profiler")
+(virtual/enqueue my-virtual (visit-state/visit-state (url/scheme+authority url))
+                 url)
+
 
 (thread-utils/get-threads "ramper.s")
 (run! #(.stop %) (thread-utils/get-threads "ramper.s"))
