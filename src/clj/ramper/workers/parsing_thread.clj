@@ -107,8 +107,8 @@
           (do (parse-fetched-data (assoc thread-data :fetched-data fetched-data))
               (recur 0))
           (let [time (bit-shift-left 1 (max 10 i))]
-            (Thread/sleep time)
             (log/info :parsing-thread {:sleep-time time})
+            (Thread/sleep time)
             (recur (inc i))))))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
