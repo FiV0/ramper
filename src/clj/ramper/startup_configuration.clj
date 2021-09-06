@@ -39,33 +39,37 @@
        (map uri/uri)))
 
 (comment
-  (read-urls (io/resource "seed.txt") )
-  (read-urls* (io/resource "seed.txt") )
-  )
+  (read-urls (io/resource "seed.txt"))
+  (read-urls* (io/resource "seed.txt")))
 
-(s/def ::startup-config (s/keys :req [:ramper/aux-buffer-size
-                                      :ramper/cookies-max-byte-size
-                                      :ramper/dns-threads
-                                      :ramper/fetching-threads
-                                      :ramper/init-front-size
-                                      :ramper/ip-delay
-                                      :ramper/is-new
-                                      :ramper/keepalive-time
-                                      ;; :ramper/max-urls
-                                      :ramper/max-urls-per-scheme+authority
-                                      :ramper/parsing-threads
-                                      :ramper/root-dir
-                                      :ramper/scheme+authority-delay
-                                      :ramper/seed-file
-                                      :ramper/sieve-size
-                                      :ramper/store-buffer-size
-                                      :ramper/url-cache-max-byte-size
-                                      :ramper/user-agent
-                                      ;; :ramper/user-agent-from
-                                      :ramper/workbench-max-byte-size]))
+(s/def ::startup-config-keys (s/keys :req [:ramper/aux-buffer-size
+                                           :ramper/cookies-max-byte-size
+                                           :ramper/dns-threads
+                                           :ramper/fetching-threads
+                                           :ramper/init-front-size
+                                           :ramper/ip-delay
+                                           :ramper/is-new
+                                           :ramper/keepalive-time
+                                           ;; :ramper/max-urls
+                                           :ramper/max-urls-per-scheme+authority
+                                           :ramper/parsing-threads
+                                           :ramper/root-dir
+                                           :ramper/scheme+authority-delay
+                                           :ramper/sieve-size
+                                           :ramper/store-buffer-size
+                                           :ramper/url-cache-max-byte-size
+                                           :ramper/user-agent
+                                           ;; :ramper/user-agent-from
+                                           :ramper/workbench-max-byte-size]))
+
+(s/def ::startup-config-internal (s/and ::startup-config-keys
+                                        (s/keys :req [:ramper/seed-file])))
+
+(s/def ::startup-config (s/and ::startup-config-keys
+                               (s/keys :req [:ramper/seed-urls])))
 
 (defn- read-config* [file]
-  {:post [(s/valid? ::startup-config %)]}
+  {:post [(s/valid? ::startup-config-internal %)]}
   (merge
    (edn/read-string (slurp (io/file (io/resource "default-config.edn"))))
    (edn/read-string (slurp (io/file file)))))
@@ -76,7 +80,8 @@
   (let [{:ramper/keys [root-dir seed-file is-new] :as config}
         (-> (read-config* file)
             (update :ramper/root-dir #(-> % io/file util/make-absolute))
-            (update :ramper/seed-file #(-> % io/file util/make-absolute)))]
+            (update :ramper/seed-file #(-> % io/file util/make-absolute)))
+        config (assoc config :ramper/seed-urls (read-urls* seed-file))]
     ;; TODO add checks for restarts
     (when-not (.exists root-dir)
       (log/warn :missing-root-dir {:dir root-dir})

@@ -2,14 +2,12 @@
   "The frontier contains a certain number datastructures shared across different
   threads of an agent."
   (:require [clojure.java.io :as io]
-            [lambdaisland.uri :as uri]
             [ramper.frontier.workbench :as workbench]
             [ramper.frontier.workbench.virtualizer :as virtualizer]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.sieve :as sieve]
             [ramper.sieve.disk-flow-receiver :as receiver]
             [ramper.sieve.mercator-sieve :as mercator-sieve]
-            [ramper.startup-configuration :as startup-config]
             [ramper.store.parallel-buffered-store :as store]
             [ramper.util.data-disk-queues :as ddq]
             [ramper.util.delay-queue :as delay-queue]
@@ -192,9 +190,8 @@
 
 (defn frontier
   "Creates a frontier initialized with all the data-structures used by an agent."
-  [runtime-config]
-  (let [seed-urls (startup-config/read-urls* (:ramper/seed-file runtime-config))
-        url-cache (lru-immutable/create-lru-cache
+  [{:ramper/keys [seed-urls] :as runtime-config}]
+  (let [url-cache (lru-immutable/create-lru-cache
                    (runtime-config/approximate-url-cache-threshold runtime-config)
                    url/hash-url-128)
         ready-urls (url-flow-receiver-init)
