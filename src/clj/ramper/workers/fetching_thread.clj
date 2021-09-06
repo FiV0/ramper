@@ -198,7 +198,7 @@
                 (if (and (visit-state/first-path vs)
                          (<= (- start-time (System/currentTimeMillis))
                              (:ramper/keepalive-time @runtime-config)))
-                  ;; TODO does the cooking unrolling and readding need to happen here all the time?
+                  ;; TODO does the cookie unrolling and readding need to happen here all the time?
                   (do
                     (cookies/clear-cookies cookie-store)
                     (run! #(cookies/add-cookie cookie-store %) (:cookies vs))
