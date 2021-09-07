@@ -150,5 +150,6 @@
       (is (= vs2 (dissoc vs2-dequeued :locked-entry)))
       (is (= vs3 (dissoc vs3-dequeued :locked-entry)))
       (is (= vs4 (dissoc vs4-dequeued :locked-entry)))
+      (is (true? (workbench/scheme+authority-present? @wb (url/scheme+authority "http://foo.bar"))))
       #_(is (= (list vs1 vs2 vs3 vs4)
                (map #(dissoc % :locked-entry) (list vs1-dequeued vs2-dequeued vs3-dequeued vs4-dequeued)))))))
