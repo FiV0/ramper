@@ -92,7 +92,7 @@
   (when-not (every? #(thread-utils/stop %) parsing-threads-wrapped)
     (log/warn :non-proper-shutdown {:type :parsing-threads})))
 
-(declare stop?)
+(declare stop)
 
 (defn shutdown-checking-loop [{:keys [runtime-config frontier] :as agent}]
   (async/go-loop []
@@ -104,7 +104,7 @@
       ;; reached a stopping condition
       (frontier/stop? runtime-config frontier)
       (do (log/info :shutdown-condition-reached {:urls-crawled @(:urls-crawled frontier)})
-          (stop? agent))
+          (stop agent))
       :else (recur))))
 
 ;; TODO the term agent might be overloaded in Clojure
