@@ -138,7 +138,10 @@
 (defn stop
   "Stops an agent and cleans up the lingering threads if any."
   [{:keys [runtime-config threads] :as _agent}]
-  (swap! runtime-config assoc :ramper/runtime-stop true)
-  ;; TODO move this cleanup stuff somewhere more consistent
-  (reset! stats/stats {})
-  (cleanup-threads threads))
+  (if-not (:ramper/runtime-stop @runtime-config)
+    (log/warn :agent-already-stopped {})
+    (do
+      (swap! runtime-config assoc :ramper/runtime-stop true)
+      ;; TODO move this cleanup stuff somewhere more consistent
+      (reset! stats/stats {})
+      (cleanup-threads threads))))
