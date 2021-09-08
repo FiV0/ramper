@@ -1,5 +1,6 @@
 (ns ramper.frontier.workbench
   (:require [clojure.math.numeric-tower :as math]
+            [io.pedestal.log :as log]
             [lambdaisland.uri]
             [ramper.frontier.workbench.workbench-entry :as we]
             [ramper.runtime-configuration :as runtime-config]
@@ -33,6 +34,7 @@
 ;;       being too computationally heavy.
 ;; TODO: the :locked-entry approach as well as keeping up with statitics of items
 ;;       is extremely fragile
+;; TODO: add path-queries inc/dec
 (defrecord Workbench [address-to-entry address-to-busy-entry
                       scheme+authorities entries broken path-queries-count])
 
@@ -116,6 +118,12 @@
               :else
               (throw (IllegalStateException. (str "ip address: " (util/ip-address->str ip-address) " not in workbench!!!"))))))
 
+(defn add-scheme+authority
+  "Signals to the `workbench` that a visit-state has been created for `scheme+authority`
+  has been created. See also scheme+authority-present?."
+  [^Workbench workbench scheme+authority]
+  (update workbench :scheme+authorities conj scheme+authority))
+
 (defn scheme+authority-present?
   "Returns true when there exists an active visit-state for the schem+authority."
   [^Workbench {:keys [scheme+authorities] :as _workbench} ^URI scheme+authority]
@@ -147,7 +155,7 @@
         {:keys [busy] :as old-wb-entry} (get-workbench-entry workbench ip-address)
         old-wb-entry (dissoc old-wb-entry :busy)
         new-wb-entry (we/add old-wb-entry (dissoc visit-state :locked-entry))
-        workbench (update workbench :scheme+authorities conj scheme+authority)]
+        workbench (update workbench :scheme+authorities conj scheme+authority)] ; still needed?
     (when locked-entry
       (assert (contains? address-to-busy-entry ip-hash))
       (assert (not (contains? address-to-entry ip-hash))))
@@ -209,6 +217,6 @@
         delay-ratio (max 1.0 (/ (+ scheme+authority-delay 1.0)
                                 (+ ip-delay 1.0)))
         scaling-factor (if (nil? workbench-entry) 1.0 (/ (we/size workbench-entry) delay-ratio))]
-    (min (/ 300000 scheme+authority-delay)
+    (min (if (zero? scheme+authority-present?) Double/MAX_VALUE (/ 300000 scheme+authority-delay))
          (max 4 (math/ceil (/ (runtime-config/workbench-size-in-path-queries runtime-config)
                               (* scaling-factor required-front-size)))))))

@@ -65,8 +65,13 @@
                         scheme+authority
                         (fnil #(visit-state/enqueue-path-query % (str (url/path+queries url)))
                               (visit-state/visit-state scheme+authority))))))
-      (do
-        (swap! new-visit-states #(into % (vals scheme+authority-to-new-visit-states)))
+      (let [visit-states (vals scheme+authority-to-new-visit-states)]
+        ;; signaling to the workbench that these visit-states have been created
+        (loop [vss visit-states]
+          (when-let [[visit-state & vss] vss]
+            (swap! workbench workbench/add-scheme+authority (:scheme+authority visit-state))
+            (recur vss)))
+        (swap! new-visit-states #(into % visit-states))
         stats))))
 
 (def ^:private the-ns-name (str *ns*))

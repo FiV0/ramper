@@ -53,7 +53,8 @@
              (:scheme+authority (peek @new-visit-states))))
       (is (= 2 (count (:path-queries (peek @new-visit-states)))))
       (is (= 1 (virtual/on-disk virtualizer)))
-      (is (= 1 (virtual/count virtualizer (visit-state/visit-state (url/scheme+authority (second urls)))))))))
+      (is (= 1 (virtual/count virtualizer (visit-state/visit-state (url/scheme+authority (second urls))))))
+      (is (= 2 (count (:scheme+authorities @workbench)))))))
 
 (defn- create-dummy-ip [s]
   (let [ba (byte-array 4)]
