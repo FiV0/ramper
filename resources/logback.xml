@@ -29,8 +29,10 @@
 
   <!-- Show debug logs that originate from our namespace -->
   <property name="level" value="INFO"/>
+  <logger name="org.apache" level="WARN" />
   <logger name="ramper.util.url" level="${level}"/>
-  <logger name="ramper.workers" level="DEBUG"/>
+  <logger name="ramper.workers" level="WARN"/>
+  <logger name="ramper.workers.dns-resolving" level="WARN"/>
   <logger name="repl-sessions.agent-testing" level="TRACE"/>
   <logger name="repl-sessions.dns-testing" level="${level}"/>
   <logger name="net.htmlparser.jericho" level="OFF"/>

@@ -37,18 +37,18 @@
 
 (def my-runtime-config (atom {:ramper/aux-buffer-size               (* 64 1024)
                               :ramper/cookies-max-byte-size         2048
-                              :ramper/dns-threads                   1
-                              :ramper/fetching-threads              1
+                              :ramper/dns-threads                   50
+                              :ramper/fetching-threads              512
                               ;; :ramper/ip-delay                      2000 ;2 seconds
                               :ramper/ip-delay                      0
                               :ramper/is-new                        true
                               :ramper/keepalive-time                5000
-                              :ramper/max-urls                      1000
+                              :ramper/max-urls                      10000
                               :ramper/max-urls-per-scheme+authority 10001
                               ;; Current estimation of the size of the front in ip addresses. Adaptively
                               ;; increased by the fetching threads whenever they have to wait to retrieve
                               ;; a visit state from the todo queue.
-                              :ramper/parsing-threads               1
+                              :ramper/parsing-threads               64
                               :ramper/required-front-size           1000
                               :ramper/runtime-pause                 false
                               :ramper/runtime-stop                  false
@@ -72,21 +72,24 @@
 
 (reinit-runtime-config my-runtime-config)
 
-(deref stats/stats)
+(comment
+  (deref stats/stats)
 
-(def my-agent (agent/agent* my-runtime-config))
-(agent/stop my-agent)
+  (def my-agent (agent/agent* my-runtime-config))
+  (agent/stop my-agent)
 
-(require '[ramper.frontier.workbench :as workbench]
-         '[ramper.frontier.workbench.visit-state :as visit-state]
-         '[ramper.frontier.workbench.virtualizer :as virtual]
-         '[ramper.util.url :as url])
+  (require '[ramper.frontier.workbench :as workbench]
+           '[ramper.frontier.workbench.visit-state :as visit-state]
+           '[ramper.frontier.workbench.virtualizer :as virtual]
+           '[ramper.util.url :as url])
 
-(-> my-agent :frontier :scheme+authority-to-count)
-(-> my-agent :frontier :urls-crawled deref)
-(-> my-agent :frontier :url-cache (.cache))
-(-> my-agent :frontier :sieve .close)
-(-> my-agent :frontier :workbench deref workbench/nb-workbench-entries)
-(-> my-agent :frontier :workbench (workbench/scheme+authority-present? (url/scheme+authority "http://localhost:8080")))
+  (-> my-agent :frontier :scheme+authority-to-count)
+  (-> my-agent :frontier :urls-crawled deref)
+  (-> my-agent :frontier :url-cache (.cache))
+  (-> my-agent :frontier :sieve .close)
+  (-> my-agent :frontier :workbench deref workbench/nb-workbench-entries)
+  (-> my-agent :frontier :workbench (workbench/scheme+authority-present? (url/scheme+authority "http://localhost:8080")))
 
-(run! #(.stop %) (thread-utils/get-threads "ramper.s"))
+  (run! #(.stop %) (thread-utils/get-threads "ramper.s"))
+
+  )

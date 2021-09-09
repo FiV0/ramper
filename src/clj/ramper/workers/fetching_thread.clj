@@ -236,6 +236,7 @@
                         (cond-> {:sleep-time time
                                  :index index}
                           ;; TODO check whether this needs to be moved out of log statement
+                          ;; TODO this front-increase is too excessive in the beginning
                           (compare-and-set! runtime-config @runtime-config
                                             (update @runtime-config :ramper/required-front-size + front-increase))
                           (assoc :front-increase front-increase)))
