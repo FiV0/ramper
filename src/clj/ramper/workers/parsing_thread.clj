@@ -106,10 +106,11 @@
           ;; TODO should this be stopped in case of some error?
           (do (parse-fetched-data (assoc thread-data :fetched-data fetched-data))
               (recur 0))
-          (let [time (bit-shift-left 1 (max 10 i))]
+          (let [time (bit-shift-left 1 (max 10 i))
+                timeout-chan (async/timeout time)]
             (log/info :parsing-thread {:sleep-time time})
-            (Thread/sleep time)
-            (recur (inc i))))))
+            (when (= :timeout (async/alt!! timeout-chan :timeout stop-chan :stop))
+              (recur (inc i)))))))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
   (log/info :graceful-shutdown {:type :parsing-thread
@@ -118,5 +119,4 @@
 
 (comment
   (uri/join (uri/uri "https://finnvolkel.com/a/foo?query=1") (uri/uri "/b/c?query=4#foo"))
-  (uri/join (uri/uri "https://finnvolkel.com/a/foo?query=1") (uri/uri "https://yoolo.com/b/c?query=4#foo"))
-  )
+  (uri/join (uri/uri "https://finnvolkel.com/a/foo?query=1") (uri/uri "https://yoolo.com/b/c?query=4#foo")))

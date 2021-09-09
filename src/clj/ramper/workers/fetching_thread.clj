@@ -230,7 +230,8 @@
                   (swap! done-queue conj vs)))
               (recur 0 wait-time))
 
-            (let [time (bit-shift-left 1 (max 10 i))]
+            (let [time (bit-shift-left 1 (max 10 i))
+                  timeout-chan (async/timeout time)]
               (log/info :fetching-thread
                         (cond-> {:sleep-time time
                                  :index index}
@@ -238,8 +239,8 @@
                           (compare-and-set! runtime-config @runtime-config
                                             (update @runtime-config :ramper/required-front-size + front-increase))
                           (assoc :front-increase front-increase)))
-              (Thread/sleep time)
-              (recur (inc i) (+ wait-time time)))))))
+              (when (= :timeout (async/alt!! timeout-chan :timeout stop-chan :stop))
+                (recur (inc i) (+ wait-time time))))))))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
   (log/info :graceful-shutdown {:type :fetching-thread

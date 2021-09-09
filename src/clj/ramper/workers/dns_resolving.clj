@@ -106,11 +106,12 @@
                     ;; o/w the visit-state gets purged by garbage collection
                     ))))
             (recur 0))
-          (let [time (bit-shift-left 1 (max 10 i))]
+          (let [time (bit-shift-left 1 (max 10 i))
+                timeout-chan (async/timeout time)]
             (log/info :dns-thread {:sleep-time time
                                    :index index})
-            (Thread/sleep time)
-            (recur (inc i))))))
+            (when (= :timeout (async/alt!! timeout-chan :timeout stop-chan :stop))
+              (recur (inc i)))))))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
   (log/info :graceful-shutdown {:type :dns-thread
