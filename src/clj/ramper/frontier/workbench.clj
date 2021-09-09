@@ -217,6 +217,6 @@
         delay-ratio (max 1.0 (/ (+ scheme+authority-delay 1.0)
                                 (+ ip-delay 1.0)))
         scaling-factor (if (nil? workbench-entry) 1.0 (/ (we/size workbench-entry) delay-ratio))]
-    (min (if (zero? scheme+authority-present?) Double/MAX_VALUE (/ 300000 scheme+authority-delay))
+    (min (if (zero? scheme+authority-delay) Double/MAX_VALUE (/ 300000 scheme+authority-delay))
          (max 4 (math/ceil (/ (runtime-config/workbench-size-in-path-queries runtime-config)
                               (* scaling-factor required-front-size)))))))
