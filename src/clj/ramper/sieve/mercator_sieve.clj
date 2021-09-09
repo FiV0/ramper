@@ -25,8 +25,8 @@
   java.io.Closeable
   (close [sieve]
     (locking sieve
-      (bucket-api/close bucket)
       (flush sieve)
+      (bucket-api/close bucket)
       (set! closed true)))
 
   Size
@@ -35,7 +35,7 @@
   Sieve
   (enqueue [sieve key]
     (io! "`enqueue` of MercatorSeive called in transaction!"
-         (when closed (throw (IllegalStateException.)))
+         (when closed (throw (IllegalStateException. "Sieve closed!")))
          (let [hash (hash-function key)]
            (locking sieve
              (set! bucket (bucket-api/append bucket hash key))

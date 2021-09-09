@@ -52,6 +52,7 @@
                              #{}
                              (range (count @enqueued)))]
         (is (= @enqueued dequeued) "enqueued and dequeued sets must be equal"))
+      (.close s)
       (let [last-flush (sieve/last-flush s)]
         (is (not= 0 last-flush) "last-flush is 0")
         (is (>= (System/currentTimeMillis) last-flush) "last-flush not less than now")))))
@@ -82,6 +83,7 @@
       (sieve/flush s)
       (run! deref dequeue-threads)
       (is (= @enqueued @dequeued) "enqueued and dequeued sets must be equal")
+      (.close s)
       (let [last-flush (sieve/last-flush s)]
         (is (not= 0 last-flush) "last-flush is 0")
         (is (>= (System/currentTimeMillis) last-flush) "last-flush not less than now")))))
