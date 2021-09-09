@@ -22,3 +22,4 @@ resources/bookmarks.json
 resources/urls.txt
 resources/seed.txt
 gc*
+test-crawl/

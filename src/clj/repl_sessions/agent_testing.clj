@@ -2,8 +2,10 @@
   (:require [clojure.core.async :as async]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
+            [lambdaisland.uri :as uri]
             [ramper.agent :as agent]
             [ramper.frontier :as frontier]
+            [ramper.startup-configuration :as startup-config]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.stats :as stats]
             [ramper.util :as util]
@@ -27,17 +29,22 @@
             :ramper/store-dir store-dir
             :ramper/runtime-stop false))))
 
-(def my-startup-config {:ramper/seed-file (io/resource "seed.txt")
+(def my-startup-config {:ramper/seed-urls (startup-config/read-urls* (io/file (io/resource "seed.txt")))
                         :ramper/init-front-size 1000})
+
+(def my-local-startup-config {:ramper/seed-urls (list (uri/uri "http://localhost:8080"))
+                              :ramper/init-front-size 1000})
 
 (def my-runtime-config (atom {:ramper/aux-buffer-size               (* 64 1024)
                               :ramper/cookies-max-byte-size         2048
                               :ramper/dns-threads                   1
                               :ramper/fetching-threads              1
-                              :ramper/ip-delay                      2000 ;2 seconds
+                              ;; :ramper/ip-delay                      2000 ;2 seconds
+                              :ramper/ip-delay                      0
                               :ramper/is-new                        true
-                              :ramper/keepalive-time                2000
-                              :ramper/max-urls-per-scheme+authority 500
+                              :ramper/keepalive-time                5000
+                              :ramper/max-urls                      1000
+                              :ramper/max-urls-per-scheme+authority 10001
                               ;; Current estimation of the size of the front in ip addresses. Adaptively
                               ;; increased by the fetching threads whenever they have to wait to retrieve
                               ;; a visit state from the todo queue.
@@ -45,7 +52,8 @@
                               :ramper/required-front-size           1000
                               :ramper/runtime-pause                 false
                               :ramper/runtime-stop                  false
-                              :ramper/scheme+authority-delay        2000 ;2 seconds
+                              ;; :ramper/scheme+authority-delay        2000 ;2 seconds
+                              :ramper/scheme+authority-delay        0
                               :ramper/sieve-size                    (* 64 1024)
                               :ramper/store-buffer-size             (* 64 1024)
                               :ramper/url-cache-max-byte-size       (* 1024 1024 1024)
@@ -54,6 +62,7 @@
                               :ramper/root-dir (util/make-absolute "test-crawl")}))
 
 (swap! my-runtime-config merge my-startup-config)
+(swap! my-runtime-config merge my-local-startup-config)
 
 (swap! my-runtime-config assoc :ramper/runtime-stop true)
 (swap! my-runtime-config assoc :ramper/runtime-stop false)
@@ -63,20 +72,21 @@
 
 (reinit-runtime-config my-runtime-config)
 
-@stats/stats
+(deref stats/stats)
 
 (def my-agent (agent/agent* my-runtime-config))
 (agent/stop my-agent)
 
-(require '[ramper.frontier.workbench.visit-state :as visit-state]
+(require '[ramper.frontier.workbench :as workbench]
+         '[ramper.frontier.workbench.visit-state :as visit-state]
          '[ramper.frontier.workbench.virtualizer :as virtual]
          '[ramper.util.url :as url])
 
-(def my-virtual (-> my-agent :frontier :virtualizer))
-(def url "https://github.com/jvm-profiling-tools/async-profiler")
-(virtual/enqueue my-virtual (visit-state/visit-state (url/scheme+authority url))
-                 url)
+(-> my-agent :frontier :scheme+authority-to-count)
+(-> my-agent :frontier :urls-crawled deref)
+(-> my-agent :frontier :url-cache (.cache))
+(-> my-agent :frontier :sieve .close)
+(-> my-agent :frontier :workbench deref workbench/nb-workbench-entries)
+(-> my-agent :frontier :workbench (workbench/scheme+authority-present? (url/scheme+authority "http://localhost:8080")))
 
-
-(thread-utils/get-threads "ramper.s")
 (run! #(.stop %) (thread-utils/get-threads "ramper.s"))

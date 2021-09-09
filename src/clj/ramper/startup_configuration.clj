@@ -60,7 +60,8 @@
                                            :ramper/url-cache-max-byte-size
                                            :ramper/user-agent
                                            ;; :ramper/user-agent-from
-                                           :ramper/workbench-max-byte-size]))
+                                           :ramper/workbench-max-byte-size]
+                                     :opt [:ramper/max-urls]))
 
 (s/def ::startup-config-internal (s/and ::startup-config-keys
                                         (s/keys :req [:ramper/seed-file])))
