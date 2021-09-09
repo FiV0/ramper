@@ -130,18 +130,21 @@
   "Creates a ramper agent based on a `runtime-config` atom."
   [runtime-config]
   {:pre [(s/valid? ::runtime-config/runtime-config @runtime-config)]}
-  (let [frontier (frontier/frontier @runtime-config)
-        agent (->Agent runtime-config frontier (init-thraeds runtime-config frontier))]
-    (shutdown-checking-loop agent)
-    agent))
+  (if (:ramper/runtime-stop @runtime-config)
+    (log/warn :config-error {:ramper/runtime-stop true})
+    (let [frontier (frontier/frontier @runtime-config)
+          agent (->Agent runtime-config frontier (init-thraeds runtime-config frontier))]
+      (shutdown-checking-loop agent)
+      agent)))
 
 (defn stop
   "Stops an agent and cleans up the lingering threads if any."
-  [{:keys [runtime-config threads] :as _agent}]
-  (if-not (:ramper/runtime-stop @runtime-config)
+  [{:keys [runtime-config frontier threads] :as _agent}]
+  (if (:ramper/runtime-stop @runtime-config)
     (log/warn :agent-already-stopped {})
     (do
       (swap! runtime-config assoc :ramper/runtime-stop true)
       ;; TODO move this cleanup stuff somewhere more consistent
-      (reset! stats/stats {})
-      (cleanup-threads threads))))
+      ;; (reset! stats/stats {})
+      (cleanup-threads threads)
+      (frontier/cleanup frontier))))

@@ -214,6 +214,13 @@
                 (atom 0)
                 (atom {}))))
 
+(defn cleanup
+  "Closes any open streams in underlying datastructures of a frontier."
+  [{:keys [virtualizer sieve store] :as _frontier}]
+  (.close virtualizer)
+  (.close sieve)
+  (.close store))
+
 (defn stop?
   "Returns true when the crawler should be stopped due to some stopping
   conditions being met."
