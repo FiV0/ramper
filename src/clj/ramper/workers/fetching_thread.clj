@@ -231,14 +231,14 @@
               (recur 0 wait-time))
 
             (let [time (bit-shift-left 1 (max 10 i))
-                  timeout-chan (async/timeout time)]
+                  timeout-chan (async/timeout time)
+                  increase-front (compare-and-set! runtime-config @runtime-config
+                                                   (update @runtime-config :ramper/required-front-size + front-increase))]
               (log/info :fetching-thread
                         (cond-> {:sleep-time time
                                  :index index}
                           ;; TODO check whether this needs to be moved out of log statement
-                          ;; TODO this front-increase is too excessive in the beginning
-                          (compare-and-set! runtime-config @runtime-config
-                                            (update @runtime-config :ramper/required-front-size + front-increase))
+                          increase-front
                           (assoc :front-increase front-increase)))
               (when (= :timeout (async/alt!! timeout-chan :timeout stop-chan :stop))
                 (recur (inc i) (+ wait-time time))))))))
