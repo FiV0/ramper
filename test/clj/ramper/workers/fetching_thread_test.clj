@@ -118,7 +118,8 @@
                      :done-queue done-queue}
         tw (thread-util/thread-wrapper (partial fetching-thread/fetching-thread thread-data 1))]
     (Thread/sleep 2000)
-    (is (true? (thread-util/stop tw)))
+    (thread-util/stop tw)
+    (is (true? (thread-util/stopped? tw)))
     (is (empty? @todo-queue))
     (is (= 2 (count @done-queue)))
     (is (match? (-> visit-state
@@ -148,5 +149,6 @@
                      :done-queue done-queue}
         tw (thread-util/thread-wrapper (partial fetching-thread/fetching-thread thread-data 1))]
     (Thread/sleep 500)
-    (is (true? (thread-util/stop tw)))
+    (thread-util/stop tw)
+    (is (true? (thread-util/stopped? tw)))
     (is (= (+ 1000 fetching-thread/front-increase) (:ramper/required-front-size @runtime-config)))))

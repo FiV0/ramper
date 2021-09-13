@@ -111,7 +111,8 @@
         tw (thread-util/thread-wrapper (partial parsing-thread/parsing-thread thread-data 1))]
     (testing "parsing-thread"
       (Thread/sleep 1000)
-      (is (true? (thread-util/stop tw)))
+      (thread-util/stop tw)
+      (is (true? (thread-util/stopped? tw)))
       (.close store)
       (is (match? (simple-record/simple-record html-url (select-response-keys html-response))
                   (store/read store-reader)))

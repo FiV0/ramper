@@ -38,8 +38,10 @@
           tw1 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 1))
           tw2 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 2))]
       (Thread/sleep 200)
-      (is (true? (thread-util/stop tw1)))
-      (is (true? (thread-util/stop tw2)))
+      (thread-util/stop tw1)
+      (thread-util/stop tw2)
+      (is (true? (thread-util/stopped? tw1)))
+      (is (true? (thread-util/stopped? tw2)))
       (is (= 1 (count @unknown-hosts)))
       (is (= 2 (workbench/nb-workbench-entries @wb)))
       (let [vs1-dequeued (workbench/peek-visit-state @wb)]
