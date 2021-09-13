@@ -22,16 +22,17 @@
 
   <root level="INFO">
     <appender-ref ref="STDOUT"/>
-    <!-- <appender-ref ref="FILE"/> -->
+    <appender-ref ref="FILE"/>
   </root>
 
   <logger name="user" level="ALL" />
 
   <!-- Show debug logs that originate from our namespace -->
   <property name="level" value="INFO"/>
-  <logger name="org.apache" level="WARN" />
+  <logger name="org.apache" level="ERROR" />
   <logger name="ramper.util.url" level="${level}"/>
   <logger name="ramper.workers" level="WARN"/>
+  <!-- <logger name="ramper.workers.fetching-thread" level="WARN"/> -->
   <logger name="ramper.workers.dns-resolving" level="WARN"/>
   <logger name="repl-sessions.agent-testing" level="TRACE"/>
   <logger name="repl-sessions.dns-testing" level="${level}"/>

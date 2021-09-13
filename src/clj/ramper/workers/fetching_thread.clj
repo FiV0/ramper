@@ -69,7 +69,10 @@
       (let [resp (client/get url {:http-client http-client
                                   :headers default-headers
                                   :cookie-store cookie-store
-                                  :throw-exceptions false})
+                                  :throw-exceptions false
+                                  ;; TODO make configurable
+                                  :connect-timeout 1000
+                                  :socket-timeout 1000})
             now (System/currentTimeMillis)
             fetched-data {:url (uri/uri url) :response resp}
             visit-state (-> visit-state
@@ -177,7 +180,7 @@
   :done-queue - an atom wrapping a clojure.lang.PersistentQueue to which finished visit
   states can be enqueued."
   [{:keys [connection-manager results-queue workbench
-           runtime-config todo-queue done-queue] :as thread-data}
+           runtime-config todo-queue done-queue stats-chan] :as thread-data}
    index stop-chan]
   (thread-utils/set-thread-name (str the-ns-name "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
@@ -224,6 +227,7 @@
                         ;; we are purging the visit state
                         :else
                         (do
+                          (async/offer! stats-chan {:fetching-thread/purge 1})
                           ;; order is important here, as the workbench entry might also get removed if empty
                           (swap! workbench workbench/set-entry-next-fetch (:ip-address visit-state) (+ now ip-delay))
                           (swap! workbench workbench/purge-visit-state vs)))))
@@ -234,6 +238,7 @@
                   timeout-chan (async/timeout time)
                   increase-front (compare-and-set! runtime-config @runtime-config
                                                    (update @runtime-config :ramper/required-front-size + front-increase))]
+              (async/offer! stats-chan {:fetching-thread/sleep time})
               (log/info :fetching-thread
                         (cond-> {:sleep-time time
                                  :index index}

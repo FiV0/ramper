@@ -30,10 +30,8 @@
 (defn start-done-thread [runtime-config frontier]
   (async/thread (done-thread/done-thread (assoc frontier :runtime-config runtime-config))))
 
-(defn start-distributor-thread [runtime-config frontier stats-chan]
-  (async/thread (distributor/distributor-thread (assoc frontier
-                                                       :runtime-config runtime-config
-                                                       :stats-chan stats-chan))))
+(defn start-distributor-thread [runtime-config frontier]
+  (async/thread (distributor/distributor-thread (assoc frontier :runtime-config runtime-config))))
 
 (defn start-stats-loop [stats-atom runtime-config frontier stats-chan]
   (stats/stats-loop stats-atom runtime-config frontier stats-chan))
@@ -60,15 +58,16 @@
                 i)))))
 
 (defn init-thraeds [runtime-config frontier]
-  (let [stats-chan (async/chan (async/sliding-buffer 5))
+  (let [stats-chan (async/chan (async/sliding-buffer 100))
         dns-resolver (dns-resolving/global-java-dns-resolver)
         conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
         frontier (assoc frontier
                         :dns-resolver dns-resolver
-                        :connection-manager conn-mgr)]
+                        :connection-manager conn-mgr
+                        :stats-chan stats-chan)]
     {:todo-thread (start-todo-thread runtime-config frontier)
      :done-thread (start-done-thread runtime-config frontier)
-     :distributor (start-distributor-thread runtime-config frontier stats-chan)
+     :distributor (start-distributor-thread runtime-config frontier)
      :stats-loop (start-stats-loop stats/stats runtime-config frontier stats-chan)
      :dns-threads-wrapped (doall (start-dns-threads runtime-config frontier))
      :fetching-threads-wrapped (doall (start-fetching-threads runtime-config frontier))
@@ -77,19 +76,29 @@
 (defn cleanup-threads [{:keys [todo-thread done-thread distributor stats-loop
                                dns-threads-wrapped fetching-threads-wrapped
                                parsing-threads-wrapped]}]
-  (when-not (async/<!! todo-thread)
+  (if (async/<!! todo-thread)
+    (log/info :proper-shutdown {:type :todo-thread})
     (log/warn :non-proper-shutdown {:type :todo-thread}))
-  (when-not (async/<!! done-thread)
+  (if (async/<!! done-thread)
+    (log/info :proper-shutdown {:type :done-thread})
     (log/warn :non-proper-shutdown {:type :done-thread}))
-  (when-not (async/<!! distributor)
+  (if (async/<!! distributor)
+    (log/info :proper-shutdown {:type :distributor-thread})
     (log/warn :non-proper-shutdown {:type :distributor-thread}))
-  (when-not (async/<!! stats-loop)
+  (if (async/<!! stats-loop)
+    (log/info :proper-shutdown {:type :stats-loop})
     (log/warn :non-proper-shutdown {:type :stats-loop}))
-  (when-not (every? #(thread-utils/stop %) dns-threads-wrapped)
+  (if (->> (pmap #(thread-utils/stop %) dns-threads-wrapped)
+           (every? true?))
+    (log/info :proper-shutdown {:type :dns-threads})
     (log/warn :non-proper-shutdown {:type :dns-threads}))
-  (when-not (every? #(thread-utils/stop %) fetching-threads-wrapped)
+  (if (->> (pmap #(thread-utils/stop %) fetching-threads-wrapped)
+           (every? true?))
+    (log/info :proper-shutdown {:type :fetching-threads})
     (log/warn :non-proper-shutdown {:type :fetching-threads}))
-  (when-not (every? #(thread-utils/stop %) parsing-threads-wrapped)
+  (if (->> (pmap #(thread-utils/stop %) parsing-threads-wrapped)
+           (every? true?))
+    (log/info :proper-shutdown {:type :parsing-threads})
     (log/warn :non-proper-shutdown {:type :parsing-threads})))
 
 (declare stop)

@@ -21,7 +21,9 @@
           t-wrapper (threads-util/thread-wrapper (partial my-thread-fn put-chan))]
       (is (= '(0 1 2) (repeatedly 3 #(async/<!! put-chan))))
       (async/close! put-chan)
-      (is (true? (threads-util/stop t-wrapper)))))
+      (threads-util/stop t-wrapper)
+      (is (true? (threads-util/stopped? t-wrapper)))))
   (testing "ramper.util.threads/ThreadWrapper with incorrect thread-fn"
     (let [t-wrapper (threads-util/thread-wrapper my-bad-thread-fn)]
-      (is (true? (threads-util/stop t-wrapper))))))
+      (threads-util/stop t-wrapper)
+      (is (true? (threads-util/stopped? t-wrapper))))))

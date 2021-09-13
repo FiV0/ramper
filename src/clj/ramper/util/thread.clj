@@ -35,7 +35,12 @@
 
 (defn stop
   "Signals the thread lauched with thread-wrapper to gracefully shut down."
-  [{:keys [stop-chan thread] :as thread-wrapper}]
+  [{:keys [stop-chan] :as thread-wrapper}]
   {:pre [(instance? ThreadWrapper thread-wrapper)]}
-  (async/>!! stop-chan true)
+  (async/put! stop-chan true))
+
+(defn stopped?
+  "Returns true when the thread shutdonw gracefully."
+  [{:keys [thread] :as thread-wrapper}]
+  {:pre [(instance? ThreadWrapper thread-wrapper)]}
   (async/<!! thread))

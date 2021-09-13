@@ -37,8 +37,8 @@
 
 (def my-runtime-config (atom {:ramper/aux-buffer-size               (* 64 1024)
                               :ramper/cookies-max-byte-size         2048
-                              :ramper/dns-threads                   50
-                              :ramper/fetching-threads              512
+                              :ramper/dns-threads                   2
+                              :ramper/fetching-threads              15
                               ;; :ramper/ip-delay                      2000 ;2 seconds
                               :ramper/ip-delay                      0
                               :ramper/is-new                        true
@@ -48,7 +48,7 @@
                               ;; Current estimation of the size of the front in ip addresses. Adaptively
                               ;; increased by the fetching threads whenever they have to wait to retrieve
                               ;; a visit state from the todo queue.
-                              :ramper/parsing-threads               64
+                              :ramper/parsing-threads               3
                               :ramper/required-front-size           1000
                               :ramper/runtime-pause                 false
                               :ramper/runtime-stop                  false
@@ -73,6 +73,7 @@
 (reinit-runtime-config my-runtime-config)
 
 (comment
+  (reset! stats/stats {})
   (deref stats/stats)
 
   (def my-agent (agent/agent* my-runtime-config))
@@ -82,6 +83,8 @@
            '[ramper.frontier.workbench.visit-state :as visit-state]
            '[ramper.frontier.workbench.virtualizer :as virtual]
            '[ramper.util.url :as url])
+
+  (-> my-agent :frontier :todo-queue deref count)
 
   (-> my-agent :frontier :scheme+authority-to-count)
   (-> my-agent :frontier :urls-crawled deref)
