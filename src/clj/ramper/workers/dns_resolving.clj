@@ -80,7 +80,7 @@
                                                        (pq/dequeue! new-visit-states))]
           (do
             (log/trace :dns-thread {:host (-> visit-state :scheme+authority uri/uri :host)})
-            (let [host (-> visit-state :scheme+authority uri/uri :host)]
+            (if-let [host (-> visit-state :scheme+authority uri/uri :host)]
               (try
                 ;; TODO should we maybe store InetAddress4 format?
                 (let [ip-address (-> (.resolve dns-resolver host) first .getAddress)]
@@ -104,7 +104,8 @@
                         (log/info :retry-dns-resolution {:delay delay :visit-state visit-state})
                         (swap! unknown-hosts conj [visit-state next-fetch])))
                     ;; o/w the visit-state gets purged by garbage collection
-                    ))))
+                    )))
+              (log/warn :scheme+authority-no-host {:scheme+authority (str (:scheme+authority visit-state))}))
             (recur 0))
           (let [time (bit-shift-left 1 (max 10 i))
                 timeout-chan (async/timeout time)]
