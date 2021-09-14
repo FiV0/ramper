@@ -66,10 +66,14 @@
       (.addHost dns-resolver (:host scheme+authority) (:ip-address visit-state))
       (log/warn :missing-ip-address {:visit-state visit-state}))
     (try
+      ;; TODO maybe improve this with respect to early termination/timeouts
       (let [resp (client/get url {:http-client http-client
                                   :headers default-headers
                                   :cookie-store cookie-store
-                                  :throw-exceptions false})
+                                  :throw-exceptions false
+                                  ;; TODO make configurable
+                                  :connection-timeout 1000
+                                  :socket-timeout 1000})
             now (System/currentTimeMillis)
             fetched-data {:url (uri/uri url) :response resp}
             visit-state (-> visit-state
@@ -114,9 +118,9 @@
               [nil visit-state true]))))
       ;; bad exception case
       (catch Exception should-not-happen
-        (log/error :unexpected-ex {:url url :ex should-not-happen})
+        (log/error :unexpected-ex {:url url :ex (type should-not-happen)})
         ;; we return the visit-state as is, but with no exception set
-        ;; this really should not happen
+        ;; this happens with invalid certificates
         (let [now (System/currentTimeMillis)
               visit-state (-> visit-state
                               visit-state/dequeue-path-query
@@ -177,7 +181,7 @@
   :done-queue - an atom wrapping a clojure.lang.PersistentQueue to which finished visit
   states can be enqueued."
   [{:keys [connection-manager results-queue workbench
-           runtime-config todo-queue done-queue] :as thread-data}
+           runtime-config todo-queue done-queue stats-chan] :as thread-data}
    index stop-chan]
   (thread-utils/set-thread-name (str the-ns-name "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
@@ -192,7 +196,6 @@
       (loop [i 0 wait-time 0]
         (when-not (async/poll! stop-chan)
           (if-let [visit-state (pq/dequeue! todo-queue)]
-
             (let [start-time (System/currentTimeMillis)]
               (loop [vs visit-state]
                 (if (and (visit-state/first-path vs)
@@ -224,6 +227,8 @@
                         ;; we are purging the visit state
                         :else
                         (do
+                          ;; TODO remove once optimized
+                          (async/offer! stats-chan {:fetching-thread/purge 1})
                           ;; order is important here, as the workbench entry might also get removed if empty
                           (swap! workbench workbench/set-entry-next-fetch (:ip-address visit-state) (+ now ip-delay))
                           (swap! workbench workbench/purge-visit-state vs)))))
@@ -234,6 +239,7 @@
                   timeout-chan (async/timeout time)
                   increase-front (compare-and-set! runtime-config @runtime-config
                                                    (update @runtime-config :ramper/required-front-size + front-increase))]
+              (async/offer! stats-chan {:fetching-thread/sleep time})
               (log/info :fetching-thread
                         (cond-> {:sleep-time time
                                  :index index}

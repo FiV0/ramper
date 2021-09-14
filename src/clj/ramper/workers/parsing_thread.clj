@@ -95,7 +95,7 @@
 
   :runtime-config - the runtime-config of the agent"
   [{:keys [_store _sieve _url-cache _scheme+authority-to-count
-           results-queue _urls-crawled] :as thread-data}
+           results-queue _urls-crawled stats-chan] :as thread-data}
    index stop-chan]
   (thread-utils/set-thread-name (str the-ns-name "-" index))
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
@@ -108,6 +108,7 @@
               (recur 0))
           (let [time (bit-shift-left 1 (max 10 i))
                 timeout-chan (async/timeout time)]
+            (async/offer! stats-chan {:parsing-thread/sleep time})
             (log/info :parsing-thread {:sleep-time time})
             (when (= :timeout (async/alt!! timeout-chan :timeout stop-chan :stop))
               (recur (inc i)))))))
