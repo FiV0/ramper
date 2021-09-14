@@ -7,5 +7,5 @@
 (defn dequeue!
   "Takes an atom containing a `clojure.lang.PersistentQueue` and pops the first
   value also assuring that the underlying queue has not changed since the pop.
-  Returns the popped element."
+  Returns the popped element if there is one, nil otherwise."
   [queue-atom] (ffirst (swap-vals! queue-atom pop)))
