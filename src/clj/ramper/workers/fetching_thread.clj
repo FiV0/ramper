@@ -72,8 +72,8 @@
                                   :cookie-store cookie-store
                                   :throw-exceptions false
                                   ;; TODO make configurable
-                                  :connection-timeout 1000
-                                  :socket-timeout 1000})
+                                  :connection-timeout 2000
+                                  :socket-timeout 2000})
             now (System/currentTimeMillis)
             fetched-data {:url (uri/uri url) :response resp}
             visit-state (-> visit-state
@@ -200,7 +200,9 @@
               (loop [vs visit-state]
                 (if (and (visit-state/first-path vs)
                          (<= (- start-time (System/currentTimeMillis))
-                             (:ramper/keepalive-time @runtime-config)))
+                             (:ramper/keepalive-time @runtime-config))
+                         ;; TODO do this more elegently
+                         (not (runtime-config/stop? @runtime-config)))
                   ;; TODO does the cookie unrolling and readding need to happen here all the time?
                   (do
                     (cookies/clear-cookies cookie-store)
