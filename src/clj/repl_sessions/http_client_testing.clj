@@ -6,15 +6,17 @@
             [io.pedestal.log :as log]
             [lambdaisland.uri :as uri]
             [org.httpkit.client :as httpkit]
-            [ramper.workers.dns-resolving :as dns-resolving]
             [ramper.util.extraction :as extract]
             [ramper.util.extraction.jericho]
             [ramper.util.url :as url]
+            [ramper.workers.dns-resolving :as dns-resolving]
             [repl-sessions.url-extraction]
             [repl-sessions.utils :refer [wrap-timer]])
   (:import (java.net InetSocketAddress URI)
+           (org.apache.http.conn.ssl NoopHostnameVerifier TrustAllStrategy TrustSelfSignedStrategy)
+           (org.apache.http.ssl SSLContextBuilder)
            (org.apache.http.impl DefaultConnectionReuseStrategy)
-           (org.apache.http.impl.client HttpClients)
+           (org.apache.http.impl.client HttpClientBuilder HttpClients)
            (org.xbill.DNS Address)))
 
 ;; test 3 things
@@ -163,3 +165,28 @@
                                   {:cause (-> (Throwable->map t) :cause)
                                    :url url})))))
 ;; => 128133
+
+;; accept all certificates test
+(defn set-hostname-verifier-noop [^HttpClientBuilder builder _req]
+  (.setSSLContext builder (.. (SSLContextBuilder.) (loadTrustMaterial nil TrustAllStrategy/INSTANCE) build))
+  (.setSSLHostnameVerifier builder NoopHostnameVerifier/INSTANCE))
+
+(def clj-http-client (core/build-http-client {:http-builder-fns [set-hostname-verifier-noop]} false cm))
+
+(def bad-ssl-urls '("https://expired.badssl.com"
+                    "https://wrong.host.badssl.com"
+                    "https://self-signed.badssl.com"
+                    "https://untrusted-root.badssl.com"
+                    "https://revoked.badssl.com"
+                    "https://pinning-test.badssl.com"
+                    "https://sha1-intermediate.badssl.com"))
+
+(def bad-url "https://courses.cs.northwestern.edu/325/readings/graham/chap11-notes.html")
+
+(apache/get
+ "https://self-signed.badssl.com"
+ {
+  ;; :connection-manager cm
+  :http-client clj-http-client
+  ;; :http-builder-fns [set-hostname-verifier-noop]
+  })
