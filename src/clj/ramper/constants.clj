@@ -62,3 +62,7 @@
   "The interval at which checks will be executed to check if the crawler
   should be shutdown due to configuations."
   (.. TimeUnit/SECONDS (toMillis 1)))
+
+(def ip-purge-interval
+  "The interval at which to purge ip addresses from the ip-store."
+  (.. TimeUnit/HOURS (toMillis 2)))
