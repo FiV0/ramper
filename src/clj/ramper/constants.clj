@@ -63,6 +63,6 @@
   should be shutdown due to configuations."
   (.. TimeUnit/SECONDS (toMillis 1)))
 
-(def ip-purge-interval
+(def ^:dynamic ip-purge-interval
   "The interval at which to purge ip addresses from the ip-store."
   (.. TimeUnit/HOURS (toMillis 2)))

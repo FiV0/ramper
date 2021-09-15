@@ -35,3 +35,21 @@
         (log/error :unexpected-ex {:ex t})))
     (log/info :graceful-shutdown {:type :ip-store-loop})
     true))
+
+(comment
+  (def ip-store-atom (atom (ip-store)))
+
+  (swap! ip-store-atom add "foo.bar" (byte-array 4))
+  (deref ip-store-atom)
+  (swap! ip-store-atom ping "foo.bar")
+  (swap! ip-store-atom remove "foo/bar")
+
+  (def runtime-config (atom {:ramper/runtime-stop false}))
+
+  (def return-chan
+    (binding [constants/ip-purge-interval 1000]
+      (ip-store-loop runtime-config {:ip-store ip-store-atom})))
+
+  (swap! runtime-config assoc :ramper/runtime-stop true)
+
+  )
