@@ -39,8 +39,8 @@
                               :ramper/cookies-max-byte-size         2048
                               :ramper/dns-threads                   50
                               :ramper/fetching-threads              512
-                              ;; :ramper/ip-delay                      2000 ;2 seconds
-                              :ramper/ip-delay                      0
+                              :ramper/ip-delay                      2000 ;2 seconds
+                              ;; :ramper/ip-delay                      0
                               :ramper/is-new                        true
                               :ramper/keepalive-time                5000
                               :ramper/max-urls                      10000
@@ -52,8 +52,8 @@
                               :ramper/required-front-size           1000
                               :ramper/runtime-pause                 false
                               :ramper/runtime-stop                  false
-                              ;; :ramper/scheme+authority-delay        2000 ;2 seconds
-                              :ramper/scheme+authority-delay        0
+                              :ramper/scheme+authority-delay        2000 ;2 seconds
+                              ;; :ramper/scheme+authority-delay        0
                               :ramper/sieve-size                    (* 64 1024)
                               :ramper/store-buffer-size             (* 64 1024)
                               :ramper/url-cache-max-byte-size       (* 1024 1024 1024)
@@ -73,6 +73,7 @@
 (reinit-runtime-config my-runtime-config)
 
 (comment
+  (reset! stats/stats {})
   (deref stats/stats)
 
   (def my-agent (agent/agent* my-runtime-config))
@@ -81,7 +82,17 @@
   (require '[ramper.frontier.workbench :as workbench]
            '[ramper.frontier.workbench.visit-state :as visit-state]
            '[ramper.frontier.workbench.virtualizer :as virtual]
-           '[ramper.util.url :as url])
+           '[ramper.util.url :as url]
+           '[ramper.store :as store]
+           '[ramper.store.simple-store :as simple-store])
+
+  (let [reader (simple-store/simple-store-reader (-> my-runtime-config deref :ramper/store-dir))]
+    (loop [res []]
+      (if-let [rec (store/read reader)]
+        (recur (conj res rec))
+        (println (str "contains " (count res) " records")))))
+
+  (-> my-agent :frontier )
 
   (-> my-agent :frontier :scheme+authority-to-count)
   (-> my-agent :frontier :urls-crawled deref)

@@ -65,7 +65,7 @@
                 cheshire/cheshire {:mvn/version "5.10.0"}}
    :jvm-opts ["-Xverify:none"
               "-Xss512k" ;; stack size
-              "-Xms10g"   ;; initial memory allocation pool
+              "-Xms20g"   ;; initial memory allocation pool
               "-XX:+UseNUMA"
               "-Djavax.net.ssl.sessionCacheSize=8192"
               "-XX:+UseTLAB"

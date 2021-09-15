@@ -242,12 +242,12 @@
                   increase-front (compare-and-set! runtime-config @runtime-config
                                                    (update @runtime-config :ramper/required-front-size + front-increase))]
               (async/offer! stats-chan {:fetching-thread/sleep time})
-              (log/info :fetching-thread
-                        (cond-> {:sleep-time time
-                                 :index index}
-                          ;; TODO check whether this needs to be moved out of log statement
-                          increase-front
-                          (assoc :front-increase front-increase)))
+              (log/trace :fetching-thread
+                         (cond-> {:sleep-time time
+                                  :index index}
+                           ;; TODO check whether this needs to be moved out of log statement
+                           increase-front
+                           (assoc :front-increase front-increase)))
               (when (= :timeout (async/alt!! timeout-chan :timeout stop-chan :stop))
                 (recur (inc i) (+ wait-time time))))))))
     (catch Throwable t

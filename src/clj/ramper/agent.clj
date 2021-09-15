@@ -68,10 +68,10 @@
     {:todo-thread (start-todo-thread runtime-config frontier)
      :done-thread (start-done-thread runtime-config frontier)
      :distributor (start-distributor-thread runtime-config frontier)
-     :stats-loop (start-stats-loop stats/stats runtime-config frontier stats-chan)
      :dns-threads-wrapped (doall (start-dns-threads runtime-config frontier))
      :fetching-threads-wrapped (doall (start-fetching-threads runtime-config frontier))
-     :parsing-threads-wrapped (doall (start-parsing-threads runtime-config frontier))}))
+     :parsing-threads-wrapped (doall (start-parsing-threads runtime-config frontier))
+     :stats-loop (start-stats-loop stats/stats runtime-config frontier stats-chan)}))
 
 (defn cleanup-threads [{:keys [todo-thread done-thread distributor stats-loop
                                dns-threads-wrapped fetching-threads-wrapped

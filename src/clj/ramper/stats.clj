@@ -28,5 +28,5 @@
             (async/<! (async/timeout constants/stats-interval))))
       (catch Throwable t
         (log/error :unexpected-ex {:ex t})))
-    (log/info :graceful-shutdown {:type :stats-thread})
+    (log/info :graceful-shutdown {:type :stats-loop})
     true))
