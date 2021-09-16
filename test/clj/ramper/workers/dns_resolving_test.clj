@@ -1,6 +1,7 @@
 (ns ramper.workers.dns-resolving-test
   (:require [clojure.test :refer [deftest is testing]]
             [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench.ip-store :as ip-store]
             [ramper.frontier.workbench.visit-state :as visit-state]
             [ramper.util :as util]
             [ramper.util.delay-queue :as delay-queue]
@@ -14,15 +15,16 @@
   (testing "global-java-dns-resolver"
     (let [host "httpbin.org"
           dns-resolver (dns-resolving/global-java-dns-resolver)
-          address (.getAddress (Address/getByName host))]
+          address (Address/getByName host)]
       (.addHost dns-resolver host address)
-      (is (true? (Arrays/equals address (-> (.resolve dns-resolver host) first .getAddress))))
+      (is (true? (Arrays/equals (.getAddress address) (-> (.resolve dns-resolver host) first .getAddress))))
       (.deleteHost dns-resolver host))))
 
 (deftest dns-thread-test
   (testing "ramper.worker.dns-resolving/dns-thread"
     (let [dns-resolver (dns-resolving/java-dns-resolver)
           wb (atom (workbench/workbench))
+          ip-store (atom (ip-store/ip-store))
           unknown-hosts (atom (delay-queue/delay-queue))
           new-visit-states (atom clojure.lang.PersistentQueue/EMPTY)
           vs1 (-> (visit-state/visit-state (url/scheme+authority "https://finnvolkel.com"))
@@ -34,7 +36,8 @@
           arg-map {:dns-resolver dns-resolver
                    :workbench wb
                    :unknown-hosts unknown-hosts
-                   :new-visit-states new-visit-states}
+                   :new-visit-states new-visit-states
+                   :ip-store ip-store}
           tw1 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 1))
           tw2 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 2))]
       (Thread/sleep 200)

@@ -7,7 +7,8 @@
             [ramper.util :as util]
             [ramper.util.macros :refer [cond-let]]
             [ramper.util.priority-queue :as pq])
-  (:import (java.util Arrays)
+  (:import (java.net InetAddress)
+           (java.util Arrays)
            (lambdaisland.uri URI)
            (ramper.frontier.workbench.visit_state VisitState)
            (ramper.frontier.workbench.workbench_entry WorkbenchEntry)))
@@ -41,7 +42,7 @@
 ;; TODO: check why Arrays/hashCode alone might not be good enough
 ;; add murmurhash3 on top?
 (defn hash-ip [ip-address]
-  (Arrays/hashCode ip-address))
+  (Arrays/hashCode (.getAddress ip-address)))
 
 (defn workbench
   "Creates a new workbench."
@@ -50,8 +51,8 @@
 
 (defn get-workbench-entry
   "Returns a workbench entry for an `ip-address`."
-  [^Workbench {:keys [address-to-entry address-to-busy-entry] :as _workbench} ^bytes ip-address]
-  {:pre [(= 4 (count ip-address))]}
+  [^Workbench {:keys [address-to-entry address-to-busy-entry] :as _workbench} ^InetAddress ip-address]
+  ;; {:pre [(= 4 (count ip-address))]}
   (let [ip-hash (hash-ip ip-address)]
     (cond (contains? address-to-entry ip-hash)
           (get address-to-entry ip-hash)
@@ -107,8 +108,8 @@
 (defn set-entry-next-fetch
   "Sets the next-fetch time of workbench entry."
   [^Workbench {:keys [address-to-entry address-to-busy-entry] :as workbench}
-   ^bytes ip-address next-fetch]
-  {:pre [(= 4 (count ip-address))]}
+   ^InetAddress ip-address next-fetch]
+  ;; {:pre [(= 4 (count ip-address))]}
   (let [ip-hash (hash-ip ip-address)]
     (cond-let [old-wb-entry (get address-to-entry ip-hash)]
               (update-workbench workbench old-wb-entry (assoc old-wb-entry :next-fetch next-fetch))
@@ -116,7 +117,7 @@
               ;; here we assume old-wb-entry is not in entries
               (update workbench :address-to-busy-entry assoc ip-hash (assoc old-wb-entry :next-fetch next-fetch))
               :else
-              (throw (IllegalStateException. (str "ip address: " (util/ip-address->str ip-address) " not in workbench!!!"))))))
+              (throw (IllegalStateException. (str "ip address: " (util/InetAddress->str ip-address) " not in workbench!!!"))))))
 
 (defn add-scheme+authority
   "Signals to the `workbench` that a visit-state has been created for `scheme+authority`

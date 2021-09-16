@@ -18,7 +18,7 @@
 (defn workbench-entry
   "Initializes a workbench entry with the given `ip-address`."
   [^bytes ip-address]
-  {:pre [(= 4 (count ip-address))]}
+  ;; {:pre [(= 4 (count ip-address))]}
   (->WorkbenchEntry (pq/priority-queue :next-fetch) ip-address 0 0))
 
 (defn is-broken?

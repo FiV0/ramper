@@ -134,6 +134,11 @@
   (->> (map int ip-address)
        (str/join ".")))
 
+(defn InetAddress->str
+  "Returns a java.net.InetAddress as string."
+  [ip-address]
+  (-> (.getAddress ip-address) ip-address->str))
+
 (defn from-now
   "Returns a timestamp `millis` milliseconds from now."
   [millis]
