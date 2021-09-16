@@ -5,6 +5,7 @@
             [io.pedestal.log :as log]
             [ramper.constants :as constants]
             [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench.ip-store :as ip-store]
             [ramper.util :as util]
             [ramper.util.thread :as thread-utils]
             [ramper.util.delay-queue :as delay-queue]
@@ -30,7 +31,7 @@
      org.apache.http.conn.DnsResolver
      (^"[Ljava.net.InetAddress;" resolve [this ^String hostname]
       (if-let [address (get host-map hostname)]
-        (into-array [(InetAddress/getByAddress hostname address)])
+        (into-array [address])
         (cond
           (= "localhost" hostname) (into-array [loopback])
           (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
@@ -51,7 +52,7 @@
        org.apache.http.conn.DnsResolver
        (^"[Ljava.net.InetAddress;" resolve [this ^String hostname]
         (if-let [address (get @global-host-map hostname)]
-          (into-array [(InetAddress/getByAddress hostname address)])
+          (into-array [address])
           (cond
             (= "localhost" hostname) (into-array [loopback])
             (re-matches dotted-address hostname) (InetAddress/getAllByName hostname)
@@ -67,8 +68,17 @@
 
 (def ^:private the-ns-name (str *ns*))
 
+(defn get-ip-address [host ip-store-wrapped dns-resolver]
+  (if (contains? @ip-store-wrapped host)
+    (do
+      (swap! ip-store-wrapped ip-store/ping host)
+      (get @ip-store-wrapped host))
+    (let [ip-address (first (.resolve dns-resolver host))]
+      (swap! ip-store-wrapped ip-store/add host ip-address)
+      ip-address)))
+
 (defn dns-thread [{:keys [dns-resolver workbench unknown-hosts
-                          new-visit-states] :as _thread-data}
+                          new-visit-states ip-store] :as _thread-data}
                   index stop-chan]
   (thread-utils/set-thread-name (str the-ns-name "-" index))
   (try
@@ -83,7 +93,7 @@
             (if-let [host (-> visit-state :scheme+authority uri/uri :host)]
               (try
                 ;; TODO should we maybe store InetAddress4 format?
-                (let [ip-address (-> (.resolve dns-resolver host) first .getAddress)]
+                (let [ip-address (get-ip-address host ip-store dns-resolver)]
                   (swap! workbench workbench/add-visit-state (-> visit-state
                                                                  (assoc :ip-address ip-address)
                                                                  (assoc :last-exception nil))))
