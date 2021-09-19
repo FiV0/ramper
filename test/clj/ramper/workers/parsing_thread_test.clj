@@ -1,5 +1,6 @@
 (ns ramper.workers.parsing-thread-test
   (:require [clj-http.client :as client]
+            [clojure.core.async :as async]
             [clojure.spec.alpha :as s]
             [clojure.test :refer [deftest is testing]]
             [lambdaisland.uri :as uri]
@@ -11,7 +12,6 @@
             [ramper.store.simple-record :as simple-record]
             [ramper.store.simple-store :as simple-store]
             [ramper.util :as util]
-            [ramper.util.byte-serializer :as serializer]
             [ramper.util.lru-immutable :as lru]
             [ramper.util.thread :as thread-util]
             [ramper.util.url :as url]
@@ -107,7 +107,7 @@
         thread-data {:store store :sieve sieve :url-cache url-cache
                      :results-queue results-queue :runtime-config runtime-config
                      :scheme+authority-to-count scheme+authority-to-count
-                     :urls-crawled urls-crawled}
+                     :urls-crawled urls-crawled :stats-chan (async/chan (async/sliding-buffer 100))}
         tw (thread-util/thread-wrapper (partial parsing-thread/parsing-thread thread-data 1))]
     (testing "parsing-thread"
       (Thread/sleep 1000)

@@ -2,6 +2,7 @@
   (:require [clj-http.conn-mgr :as conn]
             [clj-http.cookies :as cookies]
             [clj-http.core :as core]
+            [clojure.core.async :as async]
             [clojure.spec.alpha :as s]
             [clojure.test :refer [deftest is testing]]
             [matcher-combinators.test]
@@ -115,7 +116,8 @@
         thread-data {:connection-manager conn-mgr :dns-resolver dns-resolver
                      :workbench workbench :results-queue results-queue
                      :runtime-config runtime-config :todo-queue todo-queue
-                     :done-queue done-queue}
+                     :done-queue done-queue
+                     :stats-chan (async/chan (async/sliding-buffer 100))}
         tw (thread-util/thread-wrapper (partial fetching-thread/fetching-thread thread-data 1))]
     (Thread/sleep 2000)
     (thread-util/stop tw)
@@ -146,7 +148,8 @@
         thread-data {:connection-manager conn-mgr :dns-resolver dns-resolver
                      :workbench workbench :results-queue results-queue
                      :runtime-config runtime-config :todo-queue todo-queue
-                     :done-queue done-queue}
+                     :done-queue done-queue
+                     :stats-chan (async/chan (async/sliding-buffer 100))}
         tw (thread-util/thread-wrapper (partial fetching-thread/fetching-thread thread-data 1))]
     (Thread/sleep 500)
     (thread-util/stop tw)
