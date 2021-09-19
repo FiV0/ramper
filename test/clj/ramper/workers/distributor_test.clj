@@ -13,7 +13,8 @@
             [ramper.util :as util]
             [ramper.util.byte-serializer :as serializer]
             [ramper.util.url :as url]
-            [ramper.workers.distributor :as distributor]))
+            [ramper.workers.distributor :as distributor])
+  (:import (java.net InetAddress)))
 
 (defn- hash' [x] (-> x hash long))
 
@@ -26,7 +27,7 @@
           workbench (atom (-> (workbench/workbench)
                               (workbench/add-visit-state
                                (assoc (visit-state/visit-state (url/scheme+authority (second urls)))
-                                      :ip-address (byte-array 4)))))
+                                      :ip-address (InetAddress/getByAddress (byte-array 4))))))
           ready-urls (disk-flow-receiver/disk-flow-receiver (serializer/string-byte-serializer))
           _ (do
               (flow-receiver/prepare-to-append ready-urls)
@@ -59,7 +60,7 @@
 (defn- create-dummy-ip [s]
   (let [ba (byte-array 4)]
     (doall (map-indexed #(aset-byte ba %1 %2) s))
-    ba))
+    (InetAddress/getByAddress ba)))
 
 (deftest distributor-thread-test
   (testing ""

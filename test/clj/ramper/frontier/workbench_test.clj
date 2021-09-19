@@ -7,12 +7,11 @@
             [ramper.util.url :as url])
   (:import (java.net InetAddress)))
 
-(defn- get-bytes [host]
+(defn- get-address [host]
   (-> (InetAddress/getAllByName host)
-      first
-      .getAddress))
+      first))
 
-(def ip-addrs (map get-bytes ["127.0.0.1" "127.0.0.2" "127.0.0.3"]))
+(def ip-addrs (map get-address ["127.0.0.1" "127.0.0.2" "127.0.0.3"]))
 
 (defn- apply-n [f x n]
   (->> (iterate f x)
