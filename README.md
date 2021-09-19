@@ -30,7 +30,7 @@ clojure -M:test -m cognitect.test-runner
 
 If one wants to run a specific test, use the `-X` option. See also [cognitect.test-runner](https://github.com/cognitect-labs/test-runner) for options which tests to invoke.
 ```bash
-clojure -X:test :nses ['ramper.workers.parsing-thread-test]
+clojure -X:test :nses [ramper.workers.parsing-thread-test]
 ```
 
 Running the crawler against a local graph server we can use [BUbiNG](https://github.com/LAW-Unimi/BUbiNG). The following will start a server on port 8080 with a 100 Million sites,

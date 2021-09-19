@@ -197,11 +197,10 @@
   [workbench-atom]
   (loop []
     (let [wb     @workbench-atom
-          value (peek-visit-state wb)
-          new-wb (pop-visit-state wb)]
+          value (peek-visit-state wb)]
       (cond (nil? value)
             nil
-            (and value (compare-and-set! workbench-atom wb new-wb))
+            (and value (compare-and-set! workbench-atom wb (pop-visit-state wb)))
             (assoc value :locked-entry true)
             :else (recur)))))
 
