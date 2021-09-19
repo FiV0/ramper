@@ -21,15 +21,14 @@
   ;; logging
   io.pedestal/pedestal.log       {:mvn/version "0.5.7"}
   ch.qos.logback/logback-classic {:mvn/version "1.2.3"}
+  ;; to tweak logging for clj-http
+  ;; org.apache.logging.log4j/log4j-api {:mvn/version "2.11.0"}
+  ;; org.apache.logging.log4j/log4j-core {:mvn/version "2.11.0"}
+  ;; org.apache.logging.log4j/log4j-1.2-api {:mvn/version "2.11.0"}
 
   ;; resource fetching
   dnsjava/dnsjava        {:mvn/version "3.3.1"}
   clj-http/clj-http      {:mvn/version "3.12.3"}
-
-  ;; to tweak logging for clj-http
-  org.apache.logging.log4j/log4j-api {:mvn/version "2.11.0"}
-  org.apache.logging.log4j/log4j-core {:mvn/version "2.11.0"}
-  org.apache.logging.log4j/log4j-1.2-api {:mvn/version "2.11.0"}
 
   ;; html parsing
   net.htmlparser.jericho/jericho-html {:mvn/version "3.4"}
@@ -44,7 +43,8 @@
  :aliases
  {:dev
   {:extra-paths ["dev"]
-   :extra-deps {org.clojure/tools.deps.alpha {:mvn/version "0.12.994"}
+   :extra-deps {org.clojure/tools.deps.alpha {:mvn/version "0.12.994"
+                                              :exclusions [org.slf4j/slf4j-nop]}
                 #_{:git/url "https://github.com/clojure/tools.deps.alpha.git"
                    :sha "d77476f3d5f624249462e275ae62d26da89f320b"}
                 com.taoensso/tufte {:mvn/version "2.2.0"}
@@ -91,7 +91,8 @@
    :exec-fn cognitect.test-runner.api/test}
 
   :build {:extra-deps {io.github.clojure/tools.build {:git/tag "v0.1.4"
-                                                      :git/sha "169fef9"}}
+                                                      :git/sha "169fef9"
+                                                      :exclusions [org.slf4j/slf4j-nop]}}
           :ns-default build}}
 
  :mvn/repos
