@@ -7,12 +7,13 @@
             [ramper.frontier.workbench.workbench-entry :as we]
             [ramper.util :as util]
             [ramper.util.url :as url]
-            [ramper.workers.done-thread :as done-thread]))
+            [ramper.workers.done-thread :as done-thread])
+  (:import (java.net InetAddress)))
 
 (defn- create-dummy-ip [s]
   (let [ba (byte-array 4)]
     (doall (map-indexed #(aset-byte ba %1 %2) s))
-    ba))
+    (InetAddress/getByAddress ba)))
 
 (deftest done-thread-test
   (testing "done-thread"

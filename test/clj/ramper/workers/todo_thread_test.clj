@@ -5,15 +5,16 @@
             [ramper.frontier.workbench.visit-state :as visit-state]
             [ramper.workers.todo-thread :as todo-thread]
             [ramper.util :as util]
-            [ramper.util.url :as url]))
+            [ramper.util.url :as url])
+  (:import (java.net InetAddress)))
 
 (defn- create-dummy-ip [s]
   (let [ba (byte-array 4)]
     (doall (map-indexed #(aset-byte ba %1 %2) s))
-    ba))
+    (InetAddress/getByAddress ba)))
 
 (comment
-  (util/ip-address->str (create-dummy-ip [1 2 3 4])))
+  (util/InetAddress->str (create-dummy-ip [1 2 3 4])))
 
 (deftest todo-thread-test
   (testing "todo-thread"

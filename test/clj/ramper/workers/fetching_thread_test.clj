@@ -17,7 +17,7 @@
   (:import (org.xbill.DNS Address)))
 
 (deftest fetch-data-test
-  (let [ip-address (.getAddress (Address/getByName "httpbin.org"))
+  (let [ip-address (Address/getByName "httpbin.org")
         runtime-config (atom {:ramper/scheme+authority-delay 2000})
         dns-resolver (dns-resolving/global-java-dns-resolver)
         cookie-store (cookies/cookie-store)
@@ -84,9 +84,9 @@
         host1 "clojure.org"
         host2 "httpbin.org"
         host3 "finnvolkel.com" ;; explicitly using a wrong ip
-        host1-ip (.getAddress (Address/getByName host1))
-        host2-ip (.getAddress (Address/getByName host2))
-        host3-ip (.getAddress (Address/getByName host3))
+        host1-ip (Address/getByName host1)
+        host2-ip (Address/getByName host2)
+        host3-ip (Address/getByName host3)
         dns-resolver (dns-resolving/global-java-dns-resolver)
         conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
         visit-state (-> (visit-state/visit-state (url/scheme+authority "https://clojure.org"))
