@@ -52,7 +52,7 @@
 
 (def min-flush-interval
   "The minimum time in milliseconds between two flushes."
-  (.. TimeUnit/SECONDS (toMillis 10)))
+  (.. TimeUnit/SECONDS (toMillis 1)))
 
 (def stats-interval
   "The interval at which stats should be pushed to the stats thread."
@@ -66,3 +66,9 @@
 (def ^:dynamic ip-purge-interval
   "The interval at which to purge ip addresses from the ip-store."
   (.. TimeUnit/HOURS (toMillis 2)))
+
+(defonce year (* (.. TimeUnit/DAYS (toMillis 1)) 365))
+(defonce day (.. TimeUnit/DAYS (toMillis 1)))
+(defonce hour (.. TimeUnit/HOURS (toMillis 1)))
+(defonce minute (.. TimeUnit/MINUTES (toMillis 1)))
+(defonce sec (.. TimeUnit/SECONDS (toMillis 1)))

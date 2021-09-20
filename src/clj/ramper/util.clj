@@ -1,10 +1,11 @@
 (ns ramper.util
   "General utility functions for ramper."
   (:require [clojure.java.io :as io]
-            [clojure.string :as str])
-  (:import (java.io InputStream OutputStream)
+            [clojure.string :as str]
+            [ramper.constants :as constants])
+  (:import (it.unimi.dsi.bits Fast)
+           (java.io InputStream OutputStream)
            (java.nio.file Files)
-           (it.unimi.dsi.bits Fast)
            (org.apache.commons.codec.digest MurmurHash3)))
 
 (def runtime (Runtime/getRuntime))
@@ -164,3 +165,31 @@
     (assert (.exists file))
     (assert (.isDirectory file))
     (-> file .list empty?)))
+
+(defn print-time
+  "Prints the given timestamp in human readable format."
+  [time-ms]
+  (cond
+    (>= time-ms constants/year)
+    (do (print (quot time-ms constants/year) "years ")
+        (print-time (mod time-ms constants/year)))
+
+    (>= time-ms constants/day)
+    (do (print (quot time-ms constants/day) "days ")
+        (print-time (mod time-ms constants/day)))
+
+    (>= time-ms constants/hour)
+    (do (print (quot time-ms constants/hour) "hours ")
+        (print-time (mod time-ms constants/hour)))
+
+
+    (>= time-ms constants/minute)
+    (do (print (quot time-ms constants/minute) "minutes ")
+        (print-time (mod time-ms constants/minute)))
+
+    (>= time-ms constants/sec)
+    (do (print (quot time-ms constants/sec) "seconds ")
+        (print-time (mod time-ms constants/sec)))
+
+    :else
+    (println time-ms "milliseconds")))
