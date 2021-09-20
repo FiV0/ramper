@@ -72,7 +72,7 @@
   (if (contains? @ip-store-wrapped host)
     (do
       (swap! ip-store-wrapped ip-store/ping host)
-      (get @ip-store-wrapped host))
+      (ip-store/get @ip-store-wrapped host))
     (let [ip-address (first (.resolve dns-resolver host))]
       (swap! ip-store-wrapped ip-store/add host ip-address)
       ip-address)))
