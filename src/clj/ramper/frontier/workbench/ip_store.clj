@@ -1,10 +1,9 @@
 (ns ramper.frontier.workbench.ip-store
-  (:refer-clojure :exclude [remove])
+  (:refer-clojure :exclude [remove get])
   (:require [clojure.core.async :as async]
             [io.pedestal.log :as log]
             [ramper.constants :as constants]
-            [ramper.runtime-configuration :as runtime-config])
-  (:import (lambdaisland.uri URI)))
+            [ramper.runtime-configuration :as runtime-config]))
 
 ;; the ip-store is just a map from host to ip address
 ;; stored as java.net.InetAddress and a timestamp
@@ -13,6 +12,9 @@
 
 (defn add [ip-store host ip-address]
   (assoc ip-store host [ip-address (System/currentTimeMillis)]))
+
+(defn get [ip-store host]
+  (first (clojure.core/get ip-store host)))
 
 (defn remove [ip-store host]
   (dissoc ip-store host))

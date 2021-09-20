@@ -3,6 +3,7 @@
   threads of an agent."
   (:require [clojure.java.io :as io]
             [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench.ip-store :as ip-store]
             [ramper.frontier.workbench.virtualizer :as virtualizer]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.sieve :as sieve]
@@ -186,7 +187,8 @@
 (defrecord Frontier [refill-queue done-queue todo-queue results-queue
                      workbench virtualizer url-cache unknown-hosts
                      new-visit-states ready-urls sieve store
-                     path-queries-in-queues urls-crawled scheme+authority-to-count])
+                     path-queries-in-queues urls-crawled scheme+authority-to-count
+                     ip-store])
 
 (defn frontier
   "Creates a frontier initialized with all the data-structures used by an agent."
@@ -212,7 +214,8 @@
                 (store-init runtime-config)
                 (atom 0)
                 (atom 0)
-                (atom {}))))
+                (atom {})
+                (atom (ip-store/ip-store)))))
 
 (defn cleanup
   "Closes any open streams in underlying datastructures of a frontier."
