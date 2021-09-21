@@ -4,7 +4,7 @@
             [clojure.string :as str]
             [ramper.constants :as constants])
   (:import (it.unimi.dsi.bits Fast)
-           (java.io InputStream OutputStream)
+           (java.io InputStream OutputStream PushbackReader)
            (java.nio.file Files)
            (org.apache.commons.codec.digest MurmurHash3)))
 
@@ -193,3 +193,19 @@
 
     :else
     (println time-ms "milliseconds")))
+
+;; copied from nextjournal codebase
+(defn read-edn-forms [file]
+  (with-open [in (PushbackReader. (io/reader file))]
+    (doall (take-while identity (repeatedly #(read in false nil))))))
+
+(defn spit-edn-forms [file forms & opts]
+  (with-open [out (apply io/writer file opts)]
+    (binding [*out* out]
+      (run! #(pr %) forms))))
+
+(comment
+  (spit-edn-forms (make-absolute "test.edn") '({:foo :bar} {1 2}))
+  (spit-edn-forms (make-absolute "test.edn") '({:foo :bar} {1 2}) :append true)
+  (read-edn-forms (make-absolute "test.edn"))
+  )
