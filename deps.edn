@@ -32,7 +32,7 @@
 
   ;; html parsing
   net.htmlparser.jericho/jericho-html {:mvn/version "3.4"}
-  org.jsoup/jsoup                     {:mvn/version "1.13.1"}
+  org.jsoup/jsoup                     {:mvn/version "1.14.2"}
 
   ;; cache implementation
   commons-codec/commons-codec {:mvn/version "1.15"}
