@@ -1,7 +1,9 @@
 (ns ramper.util
   "General utility functions for ramper."
-  (:require [clojure.java.io :as io]
+  (:require [clojure.edn :as edn]
+            [clojure.java.io :as io]
             [clojure.string :as str]
+            [lambdaisland.uri :as uri]
             [ramper.constants :as constants])
   (:import (it.unimi.dsi.bits Fast)
            (java.io InputStream OutputStream PushbackReader)
@@ -195,9 +197,17 @@
     (println time-ms "milliseconds")))
 
 ;; copied from nextjournal codebase
+(defrecord TaggedValue [tag value])
+
+(def ^:dynamic *edn-readers* uri/edn-readers)
+
 (defn read-edn-forms [file]
   (with-open [in (PushbackReader. (io/reader file))]
-    (doall (take-while identity (repeatedly #(read in false nil))))))
+    (doall (take-while identity
+                       (repeatedly #(clojure.edn/read {:eof nil
+                                                       :readers *edn-readers*
+                                                       :default ->TaggedValue}
+                                                      in))))))
 
 (defn spit-edn-forms [file forms & opts]
   (with-open [out (apply io/writer file opts)]
