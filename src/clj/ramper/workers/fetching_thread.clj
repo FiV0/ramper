@@ -14,8 +14,10 @@
             [ramper.util.thread :as thread-utils]
             [ramper.workers.fetched-data :as fetched-data])
   (:import (java.io IOException)
+           (org.apache.http.cookie Cookie)
            (org.apache.http.impl DefaultConnectionReuseStrategy)
-           (org.apache.http.impl.client HttpClientBuilder)))
+           (org.apache.http.impl.client BasicCookieStore HttpClientBuilder)
+           (ramper.workers.dns_resolving HostToIpAddress)))
 
 ;; TODO make configurable
 (def front-increase 100)
@@ -63,7 +65,7 @@
         url (str scheme+authority (visit-state/first-path visit-state))
         scheme+authority-delay (:ramper/scheme+authority-delay @runtime-config)]
     (if (contains? visit-state :ip-address)
-      (.addHost dns-resolver (:host scheme+authority) (:ip-address visit-state))
+      (.addHost ^HostToIpAddress dns-resolver (:host scheme+authority) (:ip-address visit-state))
       (log/warn :missing-ip-address {:visit-state visit-state}))
     (try
       ;; TODO maybe improve this with respect to early termination/timeouts
@@ -127,11 +129,11 @@
                               (assoc :next-fetch (+ now scheme+authority-delay)))]
           [nil visit-state true]))
       (finally
-        (.deleteHost dns-resolver (:host scheme+authority))))))
+        (.deleteHost ^HostToIpAddress dns-resolver (:host scheme+authority))))))
 
 (defn- estimate-cookie-size
   "Returns an approximate size of the `cookie` in bytes."
-  [cookie]
+  [^Cookie cookie]
   (->> [(.getName cookie) (.getValue cookie) (.getDomain cookie) (.getPath cookie)]
        (map count)
        (apply +)))
@@ -187,7 +189,7 @@
   (thread-utils/set-thread-priority Thread/MIN_PRIORITY)
   ;; TODO check if cookie store should be added via HttpClientBuilder
   (try
-    (let [cookie-store (cookies/cookie-store)
+    (let [^BasicCookieStore cookie-store (cookies/cookie-store)
           ip-delay (:ramper/ip-delay @runtime-config)
           http-client (core/build-http-client {:http-builder-fns [set-connection-reuse]}
                                               false connection-manager)
@@ -239,13 +241,13 @@
 
             (let [time (bit-shift-left 1 (max 10 i))
                   timeout-chan (async/timeout time)
+                  ;; TODO figure out if this is not excessive
                   increase-front (compare-and-set! runtime-config @runtime-config
                                                    (update @runtime-config :ramper/required-front-size + front-increase))]
               (async/offer! stats-chan {:fetching-thread/sleep time})
               (log/trace :fetching-thread
                          (cond-> {:sleep-time time
                                   :index index}
-                           ;; TODO check whether this needs to be moved out of log statement
                            increase-front
                            (assoc :front-increase front-increase)))
               (when (= :timeout (async/alt!! timeout-chan :timeout stop-chan :stop))

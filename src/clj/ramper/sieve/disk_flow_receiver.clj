@@ -34,14 +34,14 @@
     (io! "`append` of DiskFlowReceiver called in transaction!"
          (locking this
            (when closed (throw (IllegalStateException.)))
-           (.writeLong output hash)
+           (.writeLong ^DataOutputStream output hash)
            (to-stream serializer output key)
            (set! append-size (inc append-size)))))
 
   (finish-appending [this]
     (locking this
       (when closed (throw (IllegalStateException.)))
-      (.close output)
+      (.close ^DataOutputStream output)
       (let [f (io/file (str base-name output-index))]
         (if (zero? (.length f))
           (.delete f)
@@ -65,15 +65,15 @@
              (.wait this)
              (when (and closed (zero? size)) (throw NoSuchElementException)))
            (assert (< 0 size) (str size " <= 0"))
-           (while (or (= input-index -1) (zero? (.available input)))
+           (while (or (= input-index -1) (zero? (.available ^DataInputStream input)))
              (when (not= input-index -1)
-               (.close input)
+               (.close ^DataInputStream input)
                (-> (str base-name input-index) io/file .delete))
              (set! input-index (inc input-index))
              (let [f (-> (str base-name input-index) io/file)]
                (.deleteOnExit f)
                (set! input (-> f FileInputStream. FastBufferedInputStream. DataInputStream.))))
-           (.readLong input) ; discarding hash for now
+           (.readLong ^DataInputStream input) ; discarding hash for now
            (set! size (dec size))
            (from-stream serializer input)))))
 

@@ -67,11 +67,11 @@
                           dups 0
                           last-hash nil]
                      (if (< j number-of-bucket-items)
-                       (let [hash (aget buffer (aget position j))]
+                       (let [hash (aget buffer (aget ^ints position j))]
                          (cond
                            ;; a duplicate in the bucket, invalidate it
                            (= hash last-hash)
-                           (do (aset position j Integer/MAX_VALUE)
+                           (do (aset ^ints position j Integer/MAX_VALUE)
                                (recur next store-position new-hashes (inc j) (inc dups) hash))
                            ;; no more hashes in the store
                            ;; or the new key comes before the next key in the store
@@ -83,7 +83,7 @@
                            ;; invalidate position and get next hash from store
                            (= hash next)
                            (do (store-api/append store hash)
-                               (aset position j Integer/MAX_VALUE)
+                               (aset ^ints position j Integer/MAX_VALUE)
                                (recur (if (< store-position (dec store-size)) (store-api/consume store) nil)
                                       (inc store-position)
                                       new-hashes
@@ -117,8 +117,8 @@
                    (prepare-to-append receiver)
                    (loop [j 0 bucket-position 0]
                      (if (and (< j number-of-bucket-items)
-                              (not= (aget position j) Integer/MAX_VALUE))
-                       (let [pos (aget position j)]
+                              (not= (aget ^ints position j) Integer/MAX_VALUE))
+                       (let [pos (aget ^ints position j)]
                          (if (< bucket-position pos) ;; a duplicate key
                            (do
                              (bucket-api/skip-key bucket)

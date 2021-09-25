@@ -31,7 +31,7 @@
 (defrecord WorkbenchVirtualizer [disk-queues directory]
   Closeable
   (close [_this]
-    (.close disk-queues)))
+    (.close ^ByteArrayDiskQueues disk-queues)))
 
 (defn workbench-virtualizer
   "Creates a WorkbenchVirtualizer instance."
@@ -44,44 +44,48 @@
 (defn dequeue-path-queries
   "Dequeues a maximum number of `max-urls` of path+queries from the
   `virtualizer` to the `visit-state`."
-  [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state max-urls]
+  [^WorkbenchVirtualizer {:keys [^ByteArrayDiskQueues disk-queues] :as _virtualizer}
+   ^VisitState visit-state max-urls]
   (io!
    (let [key (visit-state-key visit-state)]
      (loop [visit-state visit-state to-go (min max-urls (.count disk-queues key))]
        (if (pos? to-go)
-         (recur (vs/enqueue-path-query visit-state (util/bytes->string (.dequeue disk-queues key))) (dec to-go))
+         (recur (vs/enqueue-path-query visit-state (util/bytes->string (.dequeue disk-queues key)))
+                (dec to-go))
          visit-state)))))
 
 (defn count
   "Returns the number of path+queries associated with a visit-state."
   [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state]
-  (.count disk-queues (visit-state-key visit-state)))
+  (.count ^ByteArrayDiskQueues disk-queues (visit-state-key visit-state)))
 
 (defn on-disk
   "Returns the number of visit-states on disk."
   [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer}]
-  (.numKeys disk-queues))
+  (.numKeys ^ByteArrayDiskQueues disk-queues))
 
 (defn remove
   "Removes all path+queries associated with the given visit state."
   [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state]
   (io!
-   (.remove disk-queues (visit-state-key visit-state))))
+   (.remove ^ByteArrayDiskQueues disk-queues (visit-state-key visit-state))))
 
 ;; TODO is the visit-state here really necessary?
 (defn enqueue
   "Enqueues a given `url` to the virtualizer for the given `visit-state`."
   [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state url]
   (io!
-   (.enqueue disk-queues (visit-state-key visit-state) (-> url url/path+queries str util/string->bytes))))
+   (.enqueue ^ByteArrayDiskQueues disk-queues
+             (visit-state-key visit-state)
+             (-> url url/path+queries str util/string->bytes))))
 
 (defn collect-if
   "Performs garbage collection if the space used is below `threshold` and tries to achieve space
   usage of `target-ratio`"
   ([^WorkbenchVirtualizer virtualizer] (collect-if virtualizer 0.5 0.75))
   ([^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} threshold target-ratio]
-   (when (< (.ratio disk-queues) threshold)
+   (when (< (.ratio ^ByteArrayDiskQueues disk-queues) threshold)
      (io!
       (log/info :workbench-virtualizer "Start collection ...")
-      (.collect disk-queues target-ratio)
+      (.collect ^ByteArrayDiskQueues disk-queues target-ratio)
       (log/info :workbench-virtualizer "Completed collection ...")))))

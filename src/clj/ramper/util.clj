@@ -6,7 +6,7 @@
             [lambdaisland.uri :as uri]
             [ramper.constants :as constants])
   (:import (it.unimi.dsi.bits Fast)
-           (java.io InputStream OutputStream PushbackReader)
+           (java.io InputStream OutputStream PushbackReader Writer)
            (java.nio.file Files)
            (org.apache.commons.codec.digest MurmurHash3)))
 
@@ -79,10 +79,10 @@
 
 ;; TODO maybe move string utilities to extra ns
 
-(defn string->bytes [s]
+(defn string->bytes [^String s]
   (.getBytes s))
 
-(defn bytes->string [bs]
+(defn bytes->string [^bytes bs]
   (String. bs))
 
 (comment
@@ -113,7 +113,7 @@
 (defn number-of-cores
   "Returns the number of cores available on this machine."
   []
-  (.availableProcessors runtime))
+  (.availableProcessors ^java.lang.Runtime runtime))
 
 (defn rand-str
   "Returns a random string of length `len` in lower"
@@ -127,7 +127,7 @@
 
 (defn hash-str-128
   "Returns a 128 bit MurmurHash3 of `s` yielding a vector of two longs."
-  [s]
+  [^String s]
   (vec (MurmurHash3/hash128 s)))
 
 (defn ip-address->str
@@ -139,7 +139,7 @@
 
 (defn InetAddress->str
   "Returns a java.net.InetAddress as string."
-  [ip-address]
+  [^java.net.InetAddress ip-address]
   (-> (.getAddress ip-address) ip-address->str))
 
 (defn from-now
@@ -210,7 +210,7 @@
                                                       in))))))
 
 (defn spit-edn-forms [file forms & opts]
-  (with-open [out (apply io/writer file opts)]
+  (with-open [^Writer out (apply io/writer file opts)]
     (binding [*out* out]
       (run! #(pr %) forms))))
 

@@ -6,7 +6,7 @@
 (defn set-thread-name
   "Set the name of the current thread to `name`."
   ([name] (set-thread-name name (Thread/currentThread)))
-  ([name thread] (.setName thread name)))
+  ([name ^Thread thread] (.setName thread name)))
 
 (defn set-thread-priority
   "Sets the `priority` of the current thread."

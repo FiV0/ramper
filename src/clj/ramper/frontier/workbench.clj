@@ -41,7 +41,7 @@
 
 ;; TODO: check why Arrays/hashCode alone might not be good enough
 ;; add murmurhash3 on top?
-(defn hash-ip [ip-address]
+(defn hash-ip [^java.net.InetAddress ip-address]
   (Arrays/hashCode (.getAddress ip-address)))
 
 (defn workbench

@@ -1,6 +1,7 @@
 (ns ramper.util.priority-queue
   "A thin wrapper around `clojure.data.priority-map` to simulate a priority queue."
-  (:require [clojure.data.priority-map :as priority-map]))
+  (:require [clojure.data.priority-map :as priority-map])
+  (:import (clojure.data.priority_map PersistentPriorityMap)))
 
 (deftype PriorityQueue [queue keyfn]
   Object
@@ -25,8 +26,8 @@
   (empty [_this] (PriorityQueue. (priority-map/priority-map) keyfn))
 
   (equiv [_this o]
-    (and (= queue (.queue o))
-         (= keyfn (.keyfn o))))
+    (and (= queue (.queue ^PriorityQueue o))
+         (= keyfn (.keyfn ^PriorityQueue o))))
 
   (peek [_this]
     (-> queue first first))
@@ -36,7 +37,7 @@
 
   clojure.lang.Counted
   (count [_this]
-    (.count queue))
+    (count queue))
 
   clojure.lang.Reversible
   (rseq [_this]
@@ -44,7 +45,7 @@
       (->> queue rseq (map first))))
 
   clojure.lang.Sorted
-  (comparator [this] (.comparator (.queue this)))
+  (comparator [_this] (.comparator ^PersistentPriorityMap queue))
 
   (entryKey [_this o] (keyfn o))
 

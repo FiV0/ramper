@@ -11,6 +11,7 @@
             [ramper.util.delay-queue :as delay-queue]
             [ramper.util.persistent-queue :as pq])
   (:import (java.net InetAddress UnknownHostException)
+           (org.apache.http.conn DnsResolver)
            (org.xbill.DNS Address)))
 
 (def loopback (InetAddress/getByAddress (byte-array '(127 0 0 1))))
@@ -68,7 +69,7 @@
 
 (def ^:private the-ns-name (str *ns*))
 
-(defn get-ip-address [host ip-store-wrapped dns-resolver]
+(defn get-ip-address [host ip-store-wrapped ^DnsResolver dns-resolver]
   (if (contains? @ip-store-wrapped host)
     (do
       (swap! ip-store-wrapped ip-store/ping host)

@@ -58,7 +58,7 @@
 
 (defn from-byte-array
   "Reads bytes as an URI."
-  [bytes]
+  [^bytes bytes]
   (uri/uri (String. bytes)))
 
 (defn uri?

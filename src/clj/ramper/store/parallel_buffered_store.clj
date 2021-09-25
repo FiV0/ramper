@@ -20,7 +20,10 @@
         (async/>!! finished-ch flushing-exception)
         (let [new-flush-exception
               (try
-                (.write output-stream (.-array buffer) 0 (.-length buffer))
+                (.write ^FastBufferedOutputStream output-stream
+                        (.-array ^FastByteArrayOutputStream buffer)
+                        0
+                        (.-length ^FastByteArrayOutputStream buffer))
                 false
                 (catch Exception e
                   (if (instance? IOException e) e (IOException. e))))]
@@ -31,19 +34,19 @@
 
 (defrecord ParallelBufferedStore [output-stream empty-buffers-ch filled-buffers-ch finished-ch serializer]
   Closeable
-  (close [this]
+  (close [_this]
     (async/>!! filled-buffers-ch :ramper.store/finish-flush)
     (when-let [ex (async/<!! finished-ch)]
       (throw ex))
-    (.close output-stream)
+    (.close ^FastBufferedOutputStream output-stream)
     (async/close! empty-buffers-ch)
     (async/close! filled-buffers-ch)
     (async/close! finished-ch))
 
   Store
-  (store [this url response]
+  (store [_this url response]
     (let [buffer (async/<!! empty-buffers-ch)]
-      (.reset buffer)
+      (.reset ^FastByteArrayOutputStream buffer)
       (to-stream serializer buffer (simple-record/simple-record url response))
       (async/>!! filled-buffers-ch buffer))))
 
@@ -69,7 +72,7 @@
        (let [output-stream (-> (if is-new
                                  (FileOutputStream. store-file)
                                  (FileOutputStream. store-file true))
-                               (FastBufferedOutputStream. output-stream-buffer-size))
+                               (FastBufferedOutputStream. ^int output-stream-buffer-size))
              empty-buffers-ch (async/chan buffer-size)
              filled-buffers-ch (async/chan buffer-size)
              finished-ch (async/chan 1)]

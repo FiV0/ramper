@@ -7,8 +7,10 @@
   (:require [clojure.java.io :as io]
             [ramper.util :as util])
   (:import (java.io FileInputStream FileOutputStream IOException)
+           (java.nio.channels FileChannel)
            (java.nio ByteBuffer ByteOrder)))
 
+;; TODO better naming for name and output-file
 (defrecord Store [name output-file output-buffer input-buffer input-channel output-channel])
 
 (defn- allocate-byte-buffer [size]
@@ -34,7 +36,8 @@
 
 (defn open
   "Open the store for consuming and appending."
-  [{:keys [name output-file input-buffer output-buffer] :as store}]
+  [{:keys [^java.io.File name ^java.io.File output-file
+           ^ByteBuffer input-buffer ^ByteBuffer output-buffer] :as store}]
   (.clear output-buffer)
   (.clear input-buffer)
   (.flip input-buffer)
@@ -43,7 +46,7 @@
 
 (defn append
   "Append a hash (should be a long) to the store."
-  [{:keys [output-buffer output-channel] :as store} hash]
+  [{:keys [^ByteBuffer output-buffer ^FileChannel output-channel] :as store} hash]
   (io! "`append` of Store called in transaction!"
        (.putLong output-buffer hash)
        (when-not (.hasRemaining output-buffer)
@@ -54,7 +57,7 @@
 
 (defn consume
   "Consume a hash from the store."
-  [{:keys [input-buffer input-channel]}]
+  [{:keys [^ByteBuffer input-buffer ^FileChannel input-channel]}]
   (io! "`consume` of Store called in transaction!"
        (when-not (.hasRemaining input-buffer)
          (.clear input-buffer)
@@ -64,7 +67,8 @@
 
 (defn close
   "Close a store."
-  [{:keys [name output-file input-channel output-buffer output-channel] :as store}]
+  [{:keys [^java.io.File name ^java.io.File output-file ^FileChannel input-channel
+           ^ByteBuffer output-buffer ^FileChannel output-channel] :as store}]
   (.flip output-buffer)
   (.write output-channel output-buffer)
   (.close output-channel)
@@ -75,7 +79,7 @@
 
 (defn size
   "The size of the underlying store."
-  [{:keys [name]}]
+  [{:keys [^java.io.File name]}]
   (/ (.length name) (/ Long/SIZE Byte/SIZE)))
 
 (defn check-store
