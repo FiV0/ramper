@@ -47,13 +47,17 @@
                                               :exclusions [org.slf4j/slf4j-nop]}
                 #_{:git/url "https://github.com/clojure/tools.deps.alpha.git"
                    :sha "d77476f3d5f624249462e275ae62d26da89f320b"}
-                com.taoensso/tufte {:mvn/version "2.2.0"}
                 fiv0/kusonga {:mvn/version "0.1.0"}
                 ;; only for testing concurrent queue types
                 com.manigfeald/queue {:git/url "https://github.com/hiredman/queue.git"
                                       :sha "791e0f0464b09b2a33121fafa958613e735cccc0"}
 
                 org.clojure/tools.namespace {:mvn/version "1.1.0"}
+                ;; profiling stuff
+                com.clojure-goes-fast/clj-async-profiler {:mvn/version "0.5.1"}
+                com.taoensso/tufte {:mvn/version "2.2.0"}
+                criterium/criterium {:mvn/version "0.4.6"}
+
 
                 ;; only for murmur3 testing for now
                 it.unimi.dsi/sux4j     {:mvn/version "5.2.3"}
@@ -83,6 +87,8 @@
               ;; "-Djava.net.preferIPv4Stack=true"
               ;; "-Dlogback.configurationFile=resources/logback.xml" add to readme
               ;; "-Djava.rmi.server.hostname=127.0.0.1"
+              "-Djdk.attach.allowAttachSelf" ; allow async profiler to attach
+              "-XX:FlightRecorderOptions=stackdepth=256" ; flight recording option
               ]}
 
   :test
