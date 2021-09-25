@@ -40,4 +40,12 @@ java -cp bubing-0.9.15.jar:bubing-0.9.15-deps/* -Xmx4G -server it.unimi.di.law.b
 ```
 The precompiled jars can be found at [http://law.di.unimi.it/software/index.php?path=download/](http://law.di.unimi.it/software/index.php?path=download/).
 
+### Profiling
+
+For Java mission control to work correctly you need to set
+
+```bash
+echo 1 | sudo tee /proc/sys/kernel/perf_event_paranoid
+```
+
 ## License
