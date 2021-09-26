@@ -85,8 +85,9 @@
   "Returns the next visit state that is available in the `workbench`, nil
   if there is none available."
   [^Workbench {:keys [entries] :as _workbench}]
-  (if (and (seq entries) (<= (-> entries peek we/next-fetch) (System/currentTimeMillis)))
-    (-> entries peek we/first-visit-state)
+  (if-let [[entry] (seq entries)]
+    (when (<= (we/next-fetch entry) (System/currentTimeMillis))
+      (we/first-visit-state entry))
     nil))
 
 (defn- update-workbench
