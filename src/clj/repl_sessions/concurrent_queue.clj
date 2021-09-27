@@ -1,74 +1,91 @@
 (ns repl-sessions.concurrent-queue
   (:require [clojure.core.async :as async]
+            [criterium.core :as criterium]
             [com.manigfeald.queue :as queue]
             [ramper.util :as util])
   (:import (java.util.concurrent ConcurrentLinkedQueue)))
 
-(def nb-threads (util/number-of-cores))
-(def approx-number-items 5000000)
+(def nb-threads 256;(* 3 (util/number-of-cores))
+  )
+(def approx-number-items 2000000)
 (def number-items (+ (* (quot approx-number-items nb-threads) nb-threads) nb-threads))
 (def items-per-thread (/ number-items nb-threads))
 
 ;; ConcurrentLinkedQueue
-(let [start (System/currentTimeMillis)
-      queue (ConcurrentLinkedQueue.)
-      enqueue-threads (doall (repeatedly  nb-threads
-                                          #(async/thread
-                                             (dotimes [_ items-per-thread]
-                                               (.offer queue (util/rand-str 12)))
-                                             true)))
-      dequeue-threads (doall (repeatedly nb-threads
-                                         #(async/thread
-                                            (loop [cnt 0]
-                                              (cond
-                                                (= cnt items-per-thread) true
-                                                (.poll queue) (recur (inc cnt))
-                                                :else (recur cnt))))))]
-  (run! async/<!! enqueue-threads)
-  (run! async/<!! dequeue-threads)
+(defn test-stateful-queue []
+  (let [queue (ConcurrentLinkedQueue.)
+        enqueue-threads (doall (repeatedly  nb-threads
+                                            #(async/thread
+                                               (dotimes [_ items-per-thread]
+                                                 (.offer queue (util/rand-str 12)))
+                                               true)))
+        dequeue-threads (doall (repeatedly nb-threads
+                                           #(async/thread
+                                              (loop [cnt 0]
+                                                (cond
+                                                  (= cnt items-per-thread) true
+                                                  (.poll queue) (recur (inc cnt))
+                                                  :else (recur cnt))))))]
+    (run! async/<!! enqueue-threads)
+    (run! async/<!! dequeue-threads)))
+
+(let [start (System/currentTimeMillis)]
+  (test-stateful-queue)
   (double (/ (- (System/currentTimeMillis) start) 1000)))
-;; => 6.766
+
+(criterium/with-progress-reporting (criterium/bench (test-stateful-queue)))
+;; => mean 2.78 sec
+
 
 ;; queue with atomic reference
-(let [start (System/currentTimeMillis)
-      queue (queue/queue)
-      enqueue-threads (doall (repeatedly  nb-threads
-                                          #(async/thread
-                                             (dotimes [_ items-per-thread]
-                                               (queue/enqueue queue (util/rand-str 12)))
-                                             true)))
-      dequeue-threads (doall (repeatedly nb-threads
-                                         #(async/thread
-                                            (loop [cnt 0]
-                                              (cond
-                                                (= cnt items-per-thread) true
-                                                (queue/dequeue queue) (recur (inc cnt))
-                                                :else (recur cnt))))))]
-  (run! async/<!! enqueue-threads)
-  (run! async/<!! dequeue-threads)
+(defn test-queue-with-atomic-ref []
+  (let [queue (queue/queue)
+        enqueue-threads (doall (repeatedly  nb-threads
+                                            #(async/thread
+                                               (dotimes [_ items-per-thread]
+                                                 (queue/enqueue queue (util/rand-str 12)))
+                                               true)))
+        dequeue-threads (doall (repeatedly nb-threads
+                                           #(async/thread
+                                              (loop [cnt 0]
+                                                (cond
+                                                  (= cnt items-per-thread) true
+                                                  (queue/dequeue queue) (recur (inc cnt))
+                                                  :else (recur cnt))))))]
+    (run! async/<!! enqueue-threads)
+    (run! async/<!! dequeue-threads)))
+
+(let [start (System/currentTimeMillis)]
+  (test-queue-with-atomic-ref)
   (double (/ (- (System/currentTimeMillis) start) 1000)))
-;; => 7.022
+
+(criterium/with-progress-reporting (criterium/bench (test-stateful-queue)))
+;; => mean 2.76 sec
 
 ;; persistent queue with atom and swap
 ;; this test is kind of flawed as you are not actually getting the top element
 ;; but only dequeueing we need to use some sort of dequeue algo, see below
-(let [start (System/currentTimeMillis)
-      queue (atom clojure.lang.PersistentQueue/EMPTY)
-      enqueue-threads (doall (repeatedly  nb-threads
-                                          #(async/thread
-                                             (dotimes [_ items-per-thread]
-                                               (swap! queue conj (util/rand-str 12)))
-                                             true)))
-      dequeue-threads (doall (repeatedly nb-threads
-                                         #(async/thread
-                                            (loop [cnt 0]
-                                              (when (= cnt items-per-thread)
-                                                (swap! queue pop)
-                                                (recur (inc cnt)))))))]
-  (run! async/<!! enqueue-threads)
-  (run! async/<!! dequeue-threads)
+(defn persistent-queue-with-atom-and-swap []
+  (let [queue (atom clojure.lang.PersistentQueue/EMPTY)
+        enqueue-threads (doall (repeatedly  nb-threads
+                                            #(async/thread
+                                               (dotimes [_ items-per-thread]
+                                                 (swap! queue conj (util/rand-str 12)))
+                                               true)))
+        dequeue-threads (doall (repeatedly nb-threads
+                                           #(async/thread
+                                              (loop [cnt 0]
+                                                (when (= cnt items-per-thread)
+                                                  (swap! queue pop)
+                                                  (recur (inc cnt)))))))]
+    (run! async/<!! enqueue-threads)
+    (run! async/<!! dequeue-threads)))
+
+(let [start (System/currentTimeMillis)]
+  (persistent-queue-with-atom-and-swap)
   (double (/ (- (System/currentTimeMillis) start) 1000)))
-;; => 7.731
+
+(criterium/with-progress-reporting (criterium/bench (persistent-queue-with-atom-and-swap)))
 
 (defn dequeue! [queue]
   (loop []
@@ -79,49 +96,59 @@
         value
         (recur)))))
 
-(let [start (System/currentTimeMillis)
-      queue (atom clojure.lang.PersistentQueue/EMPTY)
-      enqueue-threads (doall (repeatedly  nb-threads
-                                          #(async/thread
-                                             (dotimes [_ items-per-thread]
-                                               (swap! queue conj (util/rand-str 12)))
-                                             true)))
-      dequeue-threads (doall (repeatedly nb-threads
-                                         #(async/thread
-                                            (loop [cnt 0]
-                                              (when (= cnt items-per-thread)
-                                                (dequeue! queue)
-                                                (recur (inc cnt)))))))]
-  (run! async/<!! enqueue-threads)
-  (run! async/<!! dequeue-threads)
+(defn persistent-queue-with-dequeue! []
+  (let [queue (atom clojure.lang.PersistentQueue/EMPTY)
+        enqueue-threads (doall (repeatedly  nb-threads
+                                            #(async/thread
+                                               (dotimes [_ items-per-thread]
+                                                 (swap! queue conj (util/rand-str 12)))
+                                               true)))
+        dequeue-threads (doall (repeatedly nb-threads
+                                           #(async/thread
+                                              (loop [cnt 0]
+                                                (when (= cnt items-per-thread)
+                                                  (dequeue! queue)
+                                                  (recur (inc cnt)))))))]
+    (run! async/<!! enqueue-threads)
+    (run! async/<!! dequeue-threads)))
+
+(let [start (System/currentTimeMillis)]
+  (persistent-queue-with-dequeue!)
   (double (/ (- (System/currentTimeMillis) start) 1000)))
-;; => 7.721
-;; wow still quite fast
+
+(criterium/with-progress-reporting (criterium/bench (persistent-queue-with-dequeue!)))
+;; mean 3.61 sec
 
 (defn dequeue2! [queue] (ffirst (swap-vals! queue pop)))
 
+(defn persistent-queue-with-dequeue2! []
+  (let [queue (atom clojure.lang.PersistentQueue/EMPTY)
+        enqueue-threads (doall (repeatedly  nb-threads
+                                            #(async/thread
+                                               (dotimes [_ items-per-thread]
+                                                 (swap! queue conj (util/rand-str 12)))
+                                               true)))
+        dequeue-threads (doall (repeatedly nb-threads
+                                           #(async/thread
+                                              (loop [cnt 0]
+                                                (when (= cnt items-per-thread)
+                                                  (dequeue2! queue)
+                                                  (recur (inc cnt)))))))]
+    (run! async/<!! enqueue-threads)
+    (run! async/<!! dequeue-threads)))
+
 ;; using simpler dequeue!
-(let [start (System/currentTimeMillis)
-      queue (atom clojure.lang.PersistentQueue/EMPTY)
-      enqueue-threads (doall (repeatedly  nb-threads
-                                          #(async/thread
-                                             (dotimes [_ items-per-thread]
-                                               (swap! queue conj (util/rand-str 12)))
-                                             true)))
-      dequeue-threads (doall (repeatedly nb-threads
-                                         #(async/thread
-                                            (loop [cnt 0]
-                                              (when (= cnt items-per-thread)
-                                                (dequeue2! queue)
-                                                (recur (inc cnt)))))))]
-  (run! async/<!! enqueue-threads)
-  (run! async/<!! dequeue-threads)
+(let [start (System/currentTimeMillis)]
+  (persistent-queue-with-dequeue2!)
   (double (/ (- (System/currentTimeMillis) start) 1000)))
-;; => 7.553
+;; => 3.602
+
+(criterium/with-progress-reporting (criterium/bench (persistent-queue-with-dequeue2!)))
+;; mean 3.64 sec
 
 ;; using a channel
 (let [start (System/currentTimeMillis)
-      queue (async/chan 5000000)
+      queue (async/chan 2000000)
       ;; the doall is important otherwise we get bitten by laziness
       enqueue-threads (doall (repeatedly  nb-threads
                                           #(async/thread
@@ -148,7 +175,7 @@
   (run! async/<!! enqueue-threads)
   (run! async/<!! dequeue-threads)
   (double (/ (- (System/currentTimeMillis) start) 1000)))
-;; => 25.047
+;; => 10.732
 ;; not very good even with fairly large buffer
 
 (let [start (System/currentTimeMillis)
@@ -173,5 +200,4 @@
   (run! async/<!! enqueue-threads)
   (run! async/<!! dequeue-threads)
   (double (/ (- (System/currentTimeMillis) start) 1000)))
-;; => 32.54
 ;; even worse with poll!/offer!
