@@ -49,7 +49,7 @@
   (empty [_this] (DelayQueue. (priority-map/priority-map)))
 
   (equiv [_this o]
-    (= priority-queue (.priority-queue o)))
+    (= priority-queue (.priority-queue ^DelayQueue o)))
 
   (peek [_this]
     (when-let [entry (peek priority-queue)]

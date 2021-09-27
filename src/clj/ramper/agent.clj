@@ -58,7 +58,7 @@
                 i)))))
 
 (defn init-thraeds [runtime-config frontier]
-  (let [stats-chan (async/chan (async/sliding-buffer 100))
+  (let [stats-chan (async/chan (async/sliding-buffer 1000))
         dns-resolver (dns-resolving/global-java-dns-resolver)
         conn-mgr (conn/make-reusable-conn-manager {:dns-resolver dns-resolver})
         frontier (assoc frontier
@@ -142,8 +142,10 @@
   (if (:ramper/runtime-stop @runtime-config)
     (log/warn :config-error {:ramper/runtime-stop true})
     (let [frontier (frontier/frontier @runtime-config)
+          _ (swap! runtime-config assoc :start-time (System/currentTimeMillis))
           agent (->Agent runtime-config frontier (init-thraeds runtime-config frontier))]
       (shutdown-checking-loop agent)
+      ;; (stats/stats-printing-loop runtime-config frontier)
       agent)))
 
 (defn stop
@@ -152,7 +154,7 @@
   (if (:ramper/runtime-stop @runtime-config)
     (log/warn :agent-already-stopped {})
     (do
-      (swap! runtime-config assoc :ramper/runtime-stop true)
+      (swap! runtime-config assoc :ramper/runtime-stop true :end-time (System/currentTimeMillis))
       ;; TODO move this cleanup stuff somewhere more consistent
       ;; (reset! stats/stats {})
       (cleanup-threads threads)

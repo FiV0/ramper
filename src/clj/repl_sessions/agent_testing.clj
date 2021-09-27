@@ -29,6 +29,16 @@
             :ramper/store-dir store-dir
             :ramper/runtime-stop false))))
 
+(defn write-benchmarks [f stats runtime-config]
+  (let [{:keys [start-time end-time]} @runtime-config
+        time (- end-time start-time)
+        benchmark {:runtime-config (dissoc @runtime-config :start-time :end-time)
+                   :stats stats
+                   :time time
+                   :bytes/sec (/ (:total-bytes stats) (/ time 1000))}]
+    (util/spit-edn-forms f [benchmark] :append true)
+    benchmark))
+
 (def my-startup-config {:ramper/seed-urls (startup-config/read-urls* (io/file (io/resource "seed.txt")))
                         :ramper/init-front-size 1000})
 
@@ -37,18 +47,18 @@
 
 (def my-runtime-config (atom {:ramper/aux-buffer-size               (* 64 1024)
                               :ramper/cookies-max-byte-size         2048
-                              :ramper/dns-threads                   50
-                              :ramper/fetching-threads              512
+                              :ramper/dns-threads                   2;50
+                              :ramper/fetching-threads              24;512
                               :ramper/ip-delay                      2000 ;2 seconds
                               ;; :ramper/ip-delay                      0
                               :ramper/is-new                        true
-                              :ramper/keepalive-time                5000
-                              :ramper/max-urls                      10000
+                              :ramper/keepalive-time                30000
+                              :ramper/max-urls                      5000
                               :ramper/max-urls-per-scheme+authority 10001
                               ;; Current estimation of the size of the front in ip addresses. Adaptively
                               ;; increased by the fetching threads whenever they have to wait to retrieve
                               ;; a visit state from the todo queue.
-                              :ramper/parsing-threads               64
+                              :ramper/parsing-threads               3;64
                               :ramper/required-front-size           1000
                               :ramper/runtime-pause                 false
                               :ramper/runtime-stop                  false
@@ -79,6 +89,11 @@
   (def my-agent (agent/agent* my-runtime-config))
   (agent/stop my-agent)
 
+  (def benchmark (write-benchmarks (util/make-absolute "benchmarks.edn") @stats/stats my-runtime-config))
+
+  (-> (util/read-edn-forms (util/make-absolute "benchmarks.edn")) first :runtime-config :ramper/fetching-threads)
+  (-> (util/read-edn-forms (util/make-absolute "benchmarks.edn")) (nth 2) :bytes/sec float)
+
   (require '[ramper.frontier.workbench :as workbench]
            '[ramper.frontier.workbench.visit-state :as visit-state]
            '[ramper.frontier.workbench.virtualizer :as virtual]
@@ -92,7 +107,8 @@
         (recur (conj res rec))
         (println (str "contains " (count res) " records")))))
 
-  (-> my-agent :frontier )
+  (-> my-runtime-config deref :ramper/required-front-size)
+
 
   (-> my-agent :frontier :scheme+authority-to-count)
   (-> my-agent :frontier :urls-crawled deref)

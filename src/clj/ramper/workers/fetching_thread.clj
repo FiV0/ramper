@@ -60,7 +60,7 @@
   :runtime-config - an atom wrapping the runtime config of the agent
 
   :cookie-store - the cookie store of the http-client"
-  [{:keys [http-client dns-resolver visit-state runtime-config cookie-store] :as _fetch-thread-data}]
+  [{:keys [http-client dns-resolver visit-state runtime-config cookie-store stats-chan] :as _fetch-thread-data}]
   (let [scheme+authority (:scheme+authority visit-state)
         url (str scheme+authority (visit-state/first-path visit-state))
         scheme+authority-delay (:ramper/scheme+authority-delay @runtime-config)]
@@ -82,6 +82,8 @@
                             visit-state/dequeue-path-query
                             (assoc :next-fetch (+ now scheme+authority-delay)
                                    :last-exception nil))]
+        ;; TODO remove this at some point againt
+        (async/offer! stats-chan {:fetching-thread/content-length (:length resp)})
         [fetched-data visit-state true])
       ;; normal exception case
       (catch IOException ex

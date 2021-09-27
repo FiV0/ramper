@@ -3,7 +3,9 @@
   (:require [clojure.core.async :as async]
             [io.pedestal.log :as log]
             [ramper.constants :as constants]
-            [ramper.runtime-configuration :as runtime-config]))
+            [ramper.frontier.workbench :as workbench]
+            [ramper.runtime-configuration :as runtime-config]
+            [ramper.sieve.disk-flow-receiver :as flow-receiver]))
 
 (def stats (atom {}))
 
@@ -15,6 +17,8 @@
           (when  (= ch stats-chan)
             ;; TODO cleanup this mess
             (cond
+              (contains? new-stats :fetching-thread/content-length)
+              (swap! stats update :total-bytes (fnil + 0) (:fetching-thread/content-length new-stats))
               (contains? new-stats :fetching-thread/purge)
               (swap! stats update :visit-states-purged (fnil inc 0))
               (contains? new-stats :fetching-thread/sleep)
@@ -30,3 +34,15 @@
         (log/error :unexpected-ex {:ex t})))
     (log/info :graceful-shutdown {:type :stats-loop})
     true))
+
+
+(defn stats-printing-loop [runtime-config frontier]
+  (async/go-loop []
+    (when (not (runtime-config/stop? @runtime-config))
+      (println "todo-queue: " (-> frontier :todo-queue deref count))
+      (println "done-queue: " (-> frontier :done-queue deref count))
+      (println "refill-queue: " (-> frontier :refill-queue deref count))
+      (println "ready-urls: " (-> frontier :ready-urls flow-receiver/size))
+      (println "workbench size: " (-> frontier :workbench deref workbench/nb-workbench-entries))
+      (async/<! (async/timeout 1000))
+      (recur))))
