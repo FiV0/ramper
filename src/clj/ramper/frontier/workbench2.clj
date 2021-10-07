@@ -36,14 +36,14 @@
   "Signals to the `workbench` that an entry has been created for `scheme+authority`
   has been created. See also scheme+authority-present?."
   [^Workbench workbench scheme+authority]
-  (update workbench :base->path-quereis assoc scheme+authority clojure.lang.PersistentQueue/EMPTY))
+  (update workbench :base->path-queries assoc scheme+authority clojure.lang.PersistentQueue/EMPTY))
 
 (defn scheme+authority-present?
   "Returns true when there exists an active entry for the schem+authority."
   [^Workbench {:keys [base->path-queries] :as _workbench} ^URI scheme+authority]
   (contains? base->path-queries scheme+authority))
 
-(defn add-workbench-entry
+(defn add-entry
   "Adds a `entry` to the workbench."
   [{:keys [base->path-queries] :as workbench} {:keys [ip-address scheme+authority] :as entry}]
   {:pre [(not (nil? ip-address))]}
@@ -81,7 +81,7 @@
   [^Workbench workbench {:keys [scheme+authority] :as _entry}]
   (update workbench :base->path-queries dissoc scheme+authority))
 
-(defn dequeue-visit-state!
+(defn dequeue-entry!
   "Takes a workbench atom and dequeues the first available visit-state
   (if any) and updates the atom accordingly."
   [workbench-atom]
