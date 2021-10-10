@@ -1,6 +1,6 @@
 (ns ramper.workers.todo-thread
   (:require [io.pedestal.log :as log]
-            [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench2 :as workbench]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.util.thread :as thread-utils]))
 
@@ -30,10 +30,10 @@
     (while (not (runtime-config/stop? @runtime-config))
       ;; TODO maybe make the dequeue loop explict to enable logging
       ;; TODO maybe enable backoff, check if loop spins
-      (when-let [{:keys [scheme+authority] :as visit-state} (workbench/dequeue-visit-state! workbench)]
+      (when-let [{:keys [scheme+authority] :as entry} (workbench/dequeue-entry! workbench)]
         (assert (<= (get @scheme+authority-to-count scheme+authority 0)
                     (:ramper/max-urls-per-scheme+authority @runtime-config)))
-        (swap! todo-queue conj visit-state)))
+        (swap! todo-queue conj entry)))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
   (log/info :todo-thread :graceful-shutdown)

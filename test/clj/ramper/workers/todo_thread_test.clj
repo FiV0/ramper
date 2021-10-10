@@ -1,8 +1,7 @@
 (ns ramper.workers.todo-thread-test
   (:require [clojure.core.async :as async]
             [clojure.test :refer [deftest is testing]]
-            [ramper.frontier.workbench :as workbench]
-            [ramper.frontier.workbench.visit-state :as visit-state]
+            [ramper.frontier.workbench2 :as workbench]
             [ramper.workers.todo-thread :as todo-thread]
             [ramper.util :as util]
             [ramper.util.url :as url])
@@ -21,16 +20,16 @@
     (let [dummy-ip1 (create-dummy-ip [1 2 3 4])
           dummy-ip2 (create-dummy-ip [2 3 4 5])
           dummy-ip3 (create-dummy-ip [3 4 5 6])
-          vs1 (-> (visit-state/visit-state (url/scheme+authority "https://finnvolkel.com"))
+          vs1 (-> (workbench/entry (url/scheme+authority "https://finnvolkel.com"))
                   (assoc :next-fetch (util/from-now 10)
                          :ip-address dummy-ip1))
-          vs2 (-> (visit-state/visit-state (url/scheme+authority "https://clojure.org"))
+          vs2 (-> (workbench/entry (url/scheme+authority "https://clojure.org"))
                   (assoc :next-fetch (util/from-now 30)
                          :ip-address dummy-ip2))
-          vs3 (-> (visit-state/visit-state (url/scheme+authority "https://news.ycombinator.com"))
+          vs3 (-> (workbench/entry (url/scheme+authority "https://news.ycombinator.com"))
                   (assoc :next-fetch (util/from-now 20)
                          :ip-address dummy-ip3))
-          wb (atom (reduce workbench/add-visit-state (workbench/workbench) [vs1 vs2 vs3]))
+          wb (atom (reduce workbench/add-entry (workbench/workbench) [vs1 vs2 vs3]))
           runtime-config (atom {:ramper/runtime-stop false
                                 :ramper/max-urls-per-scheme+authority 10})
           todo-queue (atom clojure.lang.PersistentQueue/EMPTY)
