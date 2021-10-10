@@ -22,6 +22,11 @@
   ([scheme+authority path-queries]
    (->Entry scheme+authority nil nil nil nil 0 (into clojure.lang.PersistentQueue/EMPTY path-queries))))
 
+(defn first-url [{:keys [scheme+authority path-queries]}]
+  (str scheme+authority (peek path-queries)))
+
+(defn pop-url [entry] (update entry :path-queries pop))
+
 (defrecord Workbench [base->path-queries entries])
 
 (defn workbench []

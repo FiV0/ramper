@@ -7,8 +7,7 @@
             [io.pedestal.log :as log]
             [lambdaisland.uri :as uri]
             [ramper.constants :as constants]
-            [ramper.frontier.workbench :as workbench]
-            [ramper.frontier.workbench.visit-state :as visit-state]
+            [ramper.frontier.workbench2 :as workbench]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.util.persistent-queue :as pq]
             [ramper.util.thread :as thread-utils]
@@ -60,13 +59,13 @@
   :runtime-config - an atom wrapping the runtime config of the agent
 
   :cookie-store - the cookie store of the http-client"
-  [{:keys [http-client dns-resolver visit-state runtime-config cookie-store] :as _fetch-thread-data}]
-  (let [scheme+authority (:scheme+authority visit-state)
-        url (str scheme+authority (visit-state/first-path visit-state))
+  [{:keys [http-client dns-resolver entry runtime-config cookie-store] :as _fetch-thread-data}]
+  (let [scheme+authority (:scheme+authority entry)
+        url (workbench/first-url entry)
         scheme+authority-delay (:ramper/scheme+authority-delay @runtime-config)]
-    (if (contains? visit-state :ip-address)
-      (.addHost ^HostToIpAddress dns-resolver (:host scheme+authority) (:ip-address visit-state))
-      (log/warn :missing-ip-address {:visit-state visit-state}))
+    (if (contains? entry :ip-address)
+      (.addHost ^HostToIpAddress dns-resolver (:host scheme+authority) (:ip-address entry))
+      (log/warn :missing-ip-address {:visit-state entry}))
     (try
       ;; TODO maybe improve this with respect to early termination/timeouts
       (let [resp (client/get url {:http-client http-client
@@ -78,24 +77,24 @@
                                   :socket-timeout 2000})
             now (System/currentTimeMillis)
             fetched-data {:url (uri/uri url) :response resp}
-            visit-state (-> visit-state
-                            visit-state/dequeue-path-query
-                            (assoc :next-fetch (+ now scheme+authority-delay)
-                                   :last-exception nil))]
-        [fetched-data visit-state true])
+            entry (-> entry
+                      workbench/pop-url
+                      (assoc :next-fetch (+ now scheme+authority-delay)
+                             :last-exception nil))]
+        [fetched-data entry true])
       ;; normal exception case
       (catch IOException ex
         (let [exception-type (type ex)
               now (System/currentTimeMillis)
               visit-state (cond
-                            (nil? (:last-exception visit-state))
-                            (assoc visit-state :last-exception exception-type :retries 0)
+                            (nil? (:last-exception entry))
+                            (assoc entry :last-exception exception-type :retries 0)
 
-                            (= (:last-exception visit-state) exception-type)
-                            (update visit-state :retries inc)
+                            (= (:last-exception entry) exception-type)
+                            (update entry :retries inc)
 
                             :else
-                            (assoc visit-state :last-exception exception-type))]
+                            (assoc entry :last-exception exception-type))]
           (log/warn :fetch-ex {:url url :ex exception-type})
           (cond
             ;; normal retry case
@@ -113,7 +112,7 @@
             ;; else just dequeue and continue
             :else
             (let [visit-state (-> visit-state
-                                  visit-state/dequeue-path-query
+                                  workbench/pop-url
                                   (assoc :next-fetch (+ now scheme+authority-delay)
                                          :last-exception nil))]
               (log/info :url-killed {:url url :ex exception-type})
@@ -124,8 +123,8 @@
         ;; we return the visit-state as is, but with no exception set
         ;; this happens with invalid certificates
         (let [now (System/currentTimeMillis)
-              visit-state (-> visit-state
-                              visit-state/dequeue-path-query
+              visit-state (-> entry
+                              workbench/pop-url
                               (assoc :next-fetch (+ now scheme+authority-delay)))]
           [nil visit-state true]))
       (finally
