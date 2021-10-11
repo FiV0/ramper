@@ -13,11 +13,10 @@
   IMPORTANT! This structure is not thread-safe."
   (:refer-clojure :exclude [count remove])
   (:require [io.pedestal.log :as log]
-            [ramper.frontier.workbench.visit-state :as vs]
+            [ramper.frontier.workbench2 :as workbench]
             [ramper.util :as util]
             [ramper.util.url :as url])
   (:import (java.io Closeable)
-           (ramper.frontier.workbench.visit_state VisitState)
            (ramper.util ByteArrayDiskQueues)))
 
 ;; WorkbenchVirtualizer documentation
@@ -38,26 +37,26 @@
   [dir]
   (->WorkbenchVirtualizer (ByteArrayDiskQueues. dir) dir))
 
-(defn- visit-state-key [^VisitState visit-state]
-  (-> (:scheme+authority visit-state) str hash))
+(defn- entry-key [{:keys [scheme+authority] :as _entry}]
+  (-> scheme+authority str hash))
 
 (defn dequeue-path-queries
   "Dequeues a maximum number of `max-urls` of path+queries from the
   `virtualizer` to the `visit-state`."
   [^WorkbenchVirtualizer {:keys [^ByteArrayDiskQueues disk-queues] :as _virtualizer}
-   ^VisitState visit-state max-urls]
+   entry max-urls]
   (io!
-   (let [key (visit-state-key visit-state)]
-     (loop [visit-state visit-state to-go (min max-urls (.count disk-queues key))]
+   (let [key (entry-key entry)]
+     (loop [entry entry to-go (min max-urls (.count disk-queues key))]
        (if (pos? to-go)
-         (recur (vs/enqueue-path-query visit-state (util/bytes->string (.dequeue disk-queues key)))
+         (recur (update entry :path-queries conj (util/bytes->string (.dequeue disk-queues key)))
                 (dec to-go))
-         visit-state)))))
+         entry)))))
 
 (defn count
   "Returns the number of path+queries associated with a visit-state."
-  [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state]
-  (.count ^ByteArrayDiskQueues disk-queues (visit-state-key visit-state)))
+  [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} entry]
+  (.count ^ByteArrayDiskQueues disk-queues (entry-key entry)))
 
 (defn on-disk
   "Returns the number of visit-states on disk."
@@ -66,17 +65,17 @@
 
 (defn remove
   "Removes all path+queries associated with the given visit state."
-  [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state]
+  [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} entry]
   (io!
-   (.remove ^ByteArrayDiskQueues disk-queues (visit-state-key visit-state))))
+   (.remove ^ByteArrayDiskQueues disk-queues entry)))
 
 ;; TODO is the visit-state here really necessary?
 (defn enqueue
   "Enqueues a given `url` to the virtualizer for the given `visit-state`."
-  [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} ^VisitState visit-state url]
+  [^WorkbenchVirtualizer {:keys [disk-queues] :as _virtualizer} entry url]
   (io!
    (.enqueue ^ByteArrayDiskQueues disk-queues
-             (visit-state-key visit-state)
+             (entry-key entry)
              (-> url url/path+queries str util/string->bytes))))
 
 (defn collect-if
