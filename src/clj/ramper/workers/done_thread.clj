@@ -1,8 +1,7 @@
 (ns ramper.workers.done-thread
   (:require [io.pedestal.log :as log]
-            [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench2 :as workbench]
             [ramper.frontier.workbench.virtualizer :as virtual]
-            [ramper.frontier.workbench.visit-state :as visit-state]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.util.persistent-queue :as pq]
             [ramper.util.thread :as thread-utils]))
@@ -36,26 +35,26 @@
   (try
     (loop [i 0]
       (when-not (runtime-config/stop? @runtime-config)
-        (if-let [{:keys [next-fetch] :as visit-state} (pq/dequeue! done-queue)]
+        (if-let [{:keys [next-fetch path-queries] :as entry} (pq/dequeue! done-queue)]
           (do
             (cond
               ;; purge condition
               (= Long/MAX_VALUE next-fetch)
-              (swap! workbench workbench/purge-visit-state visit-state)
+              (swap! workbench workbench/purge-entry entry)
+
+              ;; just readd to workbench
+              (seq path-queries)
+              (swap! workbench workbench/add-entry entry)
 
               ;; refill condition
               ;; TODO: test if this needs to pass through the distributor, why not go directly
               ;; to the workbench
-              (and (= 0 (visit-state/size visit-state))
-                   (< 0 (virtual/count virtualizer visit-state)))
-              (swap! refill-queue conj visit-state)
+              (< 0 (virtual/count virtualizer entry))
+              (swap! refill-queue conj entry)
 
-              ;; we also purge if there no more urls on disk
-              (= 0 (visit-state/size visit-state))
-              (swap! workbench workbench/purge-visit-state visit-state)
-
+              ;; o/w we purge as there are no more urls on disk
               :else
-              (swap! workbench workbench/add-visit-state visit-state))
+              (swap! workbench workbench/purge-entry entry))
             (recur 0))
           (do
             (Thread/sleep (bit-shift-left 1 (max i 10)))
