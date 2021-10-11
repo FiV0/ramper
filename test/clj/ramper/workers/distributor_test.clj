@@ -3,9 +3,8 @@
             [clojure.test :refer [deftest is testing]]
             [io.pedestal.log :as log]
             [matcher-combinators.test]
-            [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench2 :as workbench]
             [ramper.frontier.workbench.virtualizer :as virtual]
-            [ramper.frontier.workbench.visit-state :as visit-state]
             [ramper.sieve.disk-flow-receiver :as disk-flow-receiver]
             [ramper.sieve.flow-receiver :as flow-receiver]
             [ramper.sieve :as sieve]
@@ -25,8 +24,8 @@
                 "https://java.com/"       ;; gets a new visit-state
                 "https://java.com/about/"]
           workbench (atom (-> (workbench/workbench)
-                              (workbench/add-visit-state
-                               (assoc (visit-state/visit-state (url/scheme+authority (second urls)))
+                              (workbench/add-entry
+                               (assoc (workbench/entry (url/scheme+authority (second urls)))
                                       :ip-address (InetAddress/getByAddress (byte-array 4))))))
           ready-urls (disk-flow-receiver/disk-flow-receiver (serializer/string-byte-serializer))
           _ (do
@@ -36,10 +35,10 @@
           virtualizer (virtual/workbench-virtualizer (util/temp-dir "tmp-virtualizer"))
           scheme+authority-to-count (atom {(url/scheme+authority (first urls)) 3})
           runtime-config (atom {:ramper/max-urls-per-scheme+authority 3})
-          new-visit-states (atom clojure.lang.PersistentQueue/EMPTY)
+          new-entries (atom clojure.lang.PersistentQueue/EMPTY)
           thread-data {:workbench workbench :ready-urls ready-urls
                        :virtualizer virtualizer :scheme+authority-to-count scheme+authority-to-count
-                       :runtime-config runtime-config :new-visit-states new-visit-states}
+                       :runtime-config runtime-config :new-entries new-entries}
           stats {:deleted-from-sieve 0
                  :from-sieve-to-virtualizer 0
                  :from-sieve-to-workbench 0}
@@ -49,13 +48,13 @@
               :from-sieve-to-virtualizer 1
               :from-sieve-to-workbench 2}
              new-stats))
-      (is (= 1 (count @new-visit-states)))
+      (is (= 1 (count @new-entries)))
       (is (= (url/scheme+authority (nth urls 2))
-             (:scheme+authority (peek @new-visit-states))))
-      (is (= 2 (count (:path-queries (peek @new-visit-states)))))
+             (:scheme+authority (peek @new-entries))))
+      (is (= 2 (count (:path-queries (peek @new-entries)))))
       (is (= 1 (virtual/on-disk virtualizer)))
-      (is (= 1 (virtual/count virtualizer (visit-state/visit-state (url/scheme+authority (second urls))))))
-      (is (= 2 (count (:scheme+authorities @workbench)))))))
+      (is (= 1 (virtual/count virtualizer (workbench/entry (url/scheme+authority (second urls))))))
+      (is (= 2 (count (:base->path-queries @workbench)))))))
 
 (defn- create-dummy-ip [s]
   (let [ba (byte-array 4)]
@@ -65,31 +64,30 @@
 (deftest distributor-thread-test
   (testing ""
     (let [urls ["https://clojure.org/about/rationale/" ;; already to many urls
-                "https://httpbin.org/get" ;; has a corresponding visit-state
-                "https://java.com/"       ;; gets a new visit-state
+                "https://httpbin.org/get" ;; has a corresponding entry
+                "https://java.com/"       ;; gets a new entry
                 "https://java.com/about/"]
           dummy-ips (->> (range 4)
                          (map #(create-dummy-ip [1 1 1 %])))
           workbench (atom (-> (workbench/workbench)
-                              ;; visit-state that won't get dequeued
-                              (workbench/add-visit-state
-                               (assoc (visit-state/visit-state (url/scheme+authority (second urls)))
+                              ;; entry that won't get dequeued
+                              (workbench/add-entry
+                               (assoc (workbench/entry (url/scheme+authority (second urls)))
                                       :ip-address (first dummy-ips)
                                       :next-fetch (util/from-now 100)))
-                              ;; visit-state that will be purged
-                              (workbench/add-visit-state
-                               (-> (visit-state/visit-state (url/scheme+authority "https://foo.bar"))
+                              ;; entry that will be purged
+                              (workbench/add-entry
+                               (-> (workbench/entry (url/scheme+authority "https://foo.bar"))
                                    (assoc :ip-address (second dummy-ips)
                                           :next-fetch (util/from-now -3))))
-                              ;; visit-state that won't get purged, but also not refilled
-                              (workbench/add-visit-state
-                               (-> (visit-state/visit-state (url/scheme+authority "https://foo.toto"))
-                                   (visit-state/enqueue-path-query "/hello/world")
+                              ;; entry that won't get purged, but also not refilled
+                              (workbench/add-entry
+                               (-> (workbench/entry (url/scheme+authority "https://foo.toto") ["/hello/world"])
                                    (assoc :ip-address (nth dummy-ips 2)
                                           :next-fetch (util/from-now -2))))
-                              ;; visit-state that gets refilled
-                              (workbench/add-visit-state
-                               (-> (visit-state/visit-state (url/scheme+authority "https://bar.toto"))
+                              ;; entry that gets refilled
+                              (workbench/add-entry
+                               (-> (workbench/entry (url/scheme+authority "https://bar.toto"))
                                    (assoc :ip-address (nth dummy-ips 3)
                                           :next-fetch (util/from-now -1))))))
           ready-urls (disk-flow-receiver/disk-flow-receiver (serializer/string-byte-serializer))
@@ -100,10 +98,10 @@
               (run! #(sieve/enqueue sieve %) urls)
               (sieve/flush sieve))
           todo-queue (atom clojure.lang.PersistentQueue/EMPTY)
-          refill-queue (atom (into clojure.lang.PersistentQueue/EMPTY (repeatedly 3 #(workbench/dequeue-visit-state! workbench))))
+          refill-queue (atom (into clojure.lang.PersistentQueue/EMPTY (repeatedly 3 #(workbench/dequeue-entry! workbench))))
           virtualizer (virtual/workbench-virtualizer (util/temp-dir "tmp-virtualizer"))
           ;; TODO these dummy visit state are awkward
-          _ (run! #(virtual/enqueue virtualizer (visit-state/visit-state (url/scheme+authority "https://bar.toto")) %)
+          _ (run! #(virtual/enqueue virtualizer (workbench/entry (url/scheme+authority "https://bar.toto")) %)
                   ["https//bar.toto/hello/world" "https//bar.toto/hello/foo"])
           runtime-config (atom {:ramper/runtime-stop false
                                 :ramper/max-urls-per-scheme+authority 3
@@ -112,25 +110,23 @@
                                 :ramper/scheme+authority-delay 2000
                                 :ramper/required-front-size 1000})
           scheme+authority-to-count (atom {(url/scheme+authority (first urls)) 3})
-          new-visit-states (atom clojure.lang.PersistentQueue/EMPTY)
+          new-entries (atom clojure.lang.PersistentQueue/EMPTY)
           path-queries-in-queues (atom 5)
           thread-data {:workbench workbench :todo-queue todo-queue
                        :refill-queue refill-queue :stats-chan (async/chan (async/sliding-buffer 3))
                        :virtualizer virtualizer :sieve sieve
                        :runtime-config runtime-config :ready-urls ready-urls
                        :scheme+authority-to-count scheme+authority-to-count
-                       :new-visit-states new-visit-states
+                       :new-entries new-entries
                        :path-queries-in-queues path-queries-in-queues}
           thread (async/thread (distributor/distributor-thread thread-data))]
       (Thread/sleep 100)
       (swap! runtime-config assoc :ramper/runtime-stop true)
       (is (true? (async/<!! thread)))
-      (is (= 1 (count @new-visit-states)))
+      (is (= 1 (count @new-entries)))
       (is (= (url/scheme+authority (nth urls 2))
-             (:scheme+authority (peek @new-visit-states))))
-      (is (= 2 (count (:path-queries (peek @new-visit-states)))))
+             (:scheme+authority (peek @new-entries))))
+      (is (= 2 (count (:path-queries (peek @new-entries)))))
       (is (= 1 (virtual/on-disk virtualizer)))
-      (is (= 1 (virtual/count virtualizer (visit-state/visit-state (url/scheme+authority (second urls))))))
-      (is (= 3 (count (:address-to-entry @workbench))))
-      (is (contains? (:address-to-entry @workbench) (workbench/hash-ip (nth dummy-ips 2))))
-      (is (contains? (:address-to-entry @workbench) (workbench/hash-ip (nth dummy-ips 3)))))))
+      (is (= 1 (virtual/count virtualizer (workbench/entry (url/scheme+authority (second urls))))))
+      (is (= 4 (workbench/nb-workbench-entries @workbench))))))

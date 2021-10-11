@@ -99,3 +99,12 @@
             (and value (compare-and-set! workbench-atom wb (pop-entry wb)))
             value
             :else (recur)))))
+
+(defn path-query-limit
+  "Calculates the number of path-queries the given `visit-state` should keep in memory."
+  [^Workbench {:keys [_base->path-queries] :as _workbench}
+   {:keys [] :as _entry}
+   {:ramper/keys [_ip-delay _scheme+authority-delay] :as _runtime-config}
+   _required-front-size]
+  ;; TODO
+  500)
