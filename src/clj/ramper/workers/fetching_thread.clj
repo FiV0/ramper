@@ -86,47 +86,47 @@
       (catch IOException ex
         (let [exception-type (type ex)
               now (System/currentTimeMillis)
-              visit-state (cond
-                            (nil? (:last-exception entry))
-                            (assoc entry :last-exception exception-type :retries 0)
+              entry (cond
+                      (nil? (:last-exception entry))
+                      (assoc entry :last-exception exception-type :retries 0)
 
-                            (= (:last-exception entry) exception-type)
-                            (update entry :retries inc)
+                      (= (:last-exception entry) exception-type)
+                      (update entry :retries inc)
 
-                            :else
-                            (assoc entry :last-exception exception-type))]
+                      :else
+                      (assoc entry :last-exception exception-type))]
           (log/warn :fetch-ex {:url url :ex exception-type})
           (cond
             ;; normal retry case
-            (< (:retries visit-state) (constants/get-exception-to-max-retries exception-type))
-            (let [visit-state (assoc visit-state :next-fetch (+ now scheme+authority-delay))]
-              (log/info :url-retry {:url url :ex exception-type :retries (:retries visit-state)})
-              [nil visit-state true])
+            (< (:retries entry) (constants/get-exception-to-max-retries exception-type))
+            (let [entry (assoc entry :next-fetch (+ now scheme+authority-delay))]
+              (log/info :url-retry {:url url :ex exception-type :retries (:retries entry)})
+              [nil entry true])
 
             ;; purge case
             (contains? constants/exception-host-killer exception-type)
             (do
-              (log/warn :visit-state-purge {:url url :ex exception-type})
-              [nil visit-state false])
+              (log/warn :entry-purge {:url url :ex exception-type})
+              [nil entry false])
 
             ;; else just dequeue and continue
             :else
-            (let [visit-state (-> visit-state
-                                  workbench/pop-url
-                                  (assoc :next-fetch (+ now scheme+authority-delay)
-                                         :last-exception nil))]
+            (let [entry (-> entry
+                            workbench/pop-url
+                            (assoc :next-fetch (+ now scheme+authority-delay)
+                                   :last-exception nil))]
               (log/info :url-killed {:url url :ex exception-type})
-              [nil visit-state true]))))
+              [nil entry true]))))
       ;; bad exception case
       (catch Exception should-not-happen
         (log/error :unexpected-ex {:url url :ex (type should-not-happen)})
-        ;; we return the visit-state as is, but with no exception set
+        ;; we return the entry as is, but with no exception set
         ;; this happens with invalid certificates
         (let [now (System/currentTimeMillis)
-              visit-state (-> entry
-                              workbench/pop-url
-                              (assoc :next-fetch (+ now scheme+authority-delay)))]
-          [nil visit-state true]))
+              entry (-> entry
+                        workbench/pop-url
+                        (assoc :next-fetch (+ now scheme+authority-delay)))]
+          [nil entry true]))
       (finally
         (.deleteHost ^HostToIpAddress dns-resolver (:host scheme+authority))))))
 
@@ -189,17 +189,19 @@
   ;; TODO check if cookie store should be added via HttpClientBuilder
   (try
     (let [^BasicCookieStore cookie-store (cookies/cookie-store)
-          ip-delay (:ramper/ip-delay @runtime-config)
+          ;; ip-delay (:ramper/ip-delay @runtime-config)
           http-client (core/build-http-client {:http-builder-fns [set-connection-reuse]}
                                               false connection-manager)
           cookies-max-byte-size (:ramper/cookies-max-byte-size @runtime-config)]
 
       (loop [i 0 wait-time 0]
         (when-not (async/poll! stop-chan)
-          (if-let [visit-state (pq/dequeue! todo-queue)]
+          (if-let [entry (pq/dequeue! todo-queue)]
             (let [start-time (System/currentTimeMillis)]
-              (loop [vs visit-state]
-                (if (and (visit-state/first-path vs)
+              (loop [e entry]
+                ;; (Thread/sleep 1000)
+                (log/info :entry {:e e :queue (-> e :path-queries seq)})
+                (if (and (workbench/first-url e)
                          (<= (- start-time (System/currentTimeMillis))
                              (:ramper/keepalive-time @runtime-config))
                          ;; TODO do this more elegently
@@ -207,12 +209,11 @@
                   ;; TODO does the cookie unrolling and readding need to happen here all the time?
                   (do
                     (cookies/clear-cookies cookie-store)
-                    (run! #(cookies/add-cookie cookie-store %) (:cookies vs))
-                    (let [[fetched-data vs continue] (fetch-data (assoc thread-data
-                                                                        :http-client http-client
-                                                                        :visit-state vs
-                                                                        :cookie-store cookie-store))
-                          now (System/currentTimeMillis)]
+                    (run! #(cookies/add-cookie cookie-store %) (:cookies e))
+                    (let [[fetched-data e continue] (fetch-data (assoc thread-data
+                                                                       :http-client http-client
+                                                                       :entry e
+                                                                       :cookie-store cookie-store))]
                       (cond
                         ;; no error case
                         fetched-data
@@ -221,21 +222,17 @@
                           (swap! results-queue conj fetched-data)
                           (recur (->>
                                   (limit-cookies (seq (.getCookies cookie-store)) cookies-max-byte-size)
-                                  (visit-state/set-cookies vs))))
-                        ;; an error occurred, but the visit-state does not need to be purged
+                                  (assoc e :cookies))))
+                        ;; an error occurred, but the entry does not need to be purged
                         continue
-                        (do
-                          (swap! workbench workbench/set-entry-next-fetch (:ip-address visit-state) (+ now ip-delay))
-                          (swap! done-queue conj vs))
-                        ;; we are purging the visit state
+                        (swap! done-queue conj e)
+                        ;; we are purging the workbench entry
                         :else
                         (do
                           ;; TODO remove once optimized
                           (async/offer! stats-chan {:fetching-thread/purge 1})
-                          ;; order is important here, as the workbench entry might also get removed if empty
-                          (swap! workbench workbench/set-entry-next-fetch (:ip-address visit-state) (+ now ip-delay))
-                          (swap! workbench workbench/purge-visit-state vs)))))
-                  (swap! done-queue conj vs)))
+                          (swap! workbench workbench/purge-entry e)))))
+                  (swap! done-queue conj e)))
               (recur 0 wait-time))
 
             (let [time (bit-shift-left 1 (max 10 i))
