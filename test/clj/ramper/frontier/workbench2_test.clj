@@ -95,6 +95,20 @@
       (is (nil? (workbench/peek-entry @wb)))
       (is (zero? (workbench/nb-workbench-entries @wb))))))
 
+(deftest workbench-refill-on-add-test
+  (testing "workbench purge testing"
+    (let [ip (first ip-addrs)
+          base (url/scheme+authority "http://foo.bar")
+          entry (-> (workbench/entry base)
+                    (assoc :ip-address ip)
+                    (assoc :next-fetch (util/from-now -1)))
+          wb (atom (-> (workbench/workbench)
+                       (workbench/add-path-query base "/path1")
+                       (workbench/add-path-query base "/path2")
+                       (workbench/add-entry entry)))]
+      (is (= 2 (-> @wb workbench/peek-entry :path-queries count)))
+      (is (= 1 (workbench/nb-workbench-entries @wb))))))
+
 (deftest workbench-atom-testing
   (testing "workbench with atom"
     (let [wb (atom (workbench/workbench))

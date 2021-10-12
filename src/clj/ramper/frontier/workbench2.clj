@@ -57,7 +57,7 @@
       (add-scheme+authority scheme+authority)
       (update :entries conj (update entry :path-queries #(into %1 %2) (get base->path-queries scheme+authority)))))
 
-(defn add-path-queries
+(defn add-path-query
   "Adds a `path-query` to the workbench."
   [workbench scheme+authority path-query]
   (update workbench :base->path-queries
