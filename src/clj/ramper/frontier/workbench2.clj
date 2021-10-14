@@ -41,8 +41,9 @@
 (defn add-scheme+authority
   "Signals to the `workbench` that an entry has been created for `scheme+authority`
   has been created. See also scheme+authority-present?."
-  [^Workbench workbench scheme+authority]
-  (update workbench :base->path-queries assoc scheme+authority clojure.lang.PersistentQueue/EMPTY))
+  [^Workbench {:keys [base->path-queries] :as workbench} scheme+authority]
+  (update workbench :base->path-queries assoc scheme+authority (or (get base->path-queries scheme+authority)
+                                                                   clojure.lang.PersistentQueue/EMPTY)))
 
 (defn scheme+authority-present?
   "Returns true when there exists an active entry for the schem+authority."
@@ -62,6 +63,11 @@
   [workbench scheme+authority path-query]
   (update workbench :base->path-queries
           update scheme+authority (fnil conj clojure.lang.PersistentQueue/EMPTY) path-query))
+
+(defn queued-path-queries?
+  "Checks weather there are currently queued path-queries in the workbench."
+  [{:keys [base->path-queries] :as _workbench} scheme+authority]
+  (seq (get base->path-queries scheme+authority)))
 
 (defn peek-entry
   "Returns the next entry that is available in the `workbench`, nil

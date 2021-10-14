@@ -1,7 +1,6 @@
 (ns ramper.workers.done-thread
   (:require [io.pedestal.log :as log]
             [ramper.frontier.workbench2 :as workbench]
-            [ramper.frontier.workbench.virtualizer :as virtual]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.util.persistent-queue :as pq]
             [ramper.util.thread :as thread-utils]))
@@ -29,13 +28,13 @@
   :virtualizer - a workbench virtualizer, see also
   ramper.frontier.workbench.virtualizer"
   [{:keys [runtime-config workbench done-queue
-           refill-queue virtualizer] :as _thread_data}]
+           refill-queue] :as _thread_data}]
   (thread-utils/set-thread-name the-ns-name)
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
     (loop [i 0]
       (when-not (runtime-config/stop? @runtime-config)
-        (if-let [{:keys [next-fetch path-queries] :as entry} (pq/dequeue! done-queue)]
+        (if-let [{:keys [next-fetch path-queries scheme+authority] :as entry} (pq/dequeue! done-queue)]
           (do
             (cond
               ;; purge condition
@@ -43,18 +42,13 @@
               (swap! workbench workbench/purge-entry entry)
 
               ;; just readd to workbench
-              (seq path-queries)
+              (or (seq path-queries) (workbench/queued-path-queries? @workbench scheme+authority))
               (swap! workbench workbench/add-entry entry)
 
               ;; refill condition
-              ;; TODO: test if this needs to pass through the distributor, why not go directly
-              ;; to the workbench
-              (< 0 (virtual/count virtualizer entry))
-              (swap! refill-queue conj entry)
-
-              ;; o/w we purge as there are no more urls on disk
+              ;; we do not purge here as otherwise urls might get lost
               :else
-              (swap! workbench workbench/purge-entry entry))
+              (swap! refill-queue conj entry))
             (recur 0))
           (do
             (Thread/sleep (bit-shift-left 1 (max i 10)))
