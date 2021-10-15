@@ -71,6 +71,7 @@
   (testing ""
     (let [urls ["https://clojure.org/about/rationale/" ;; already to many urls
                 "https://httpbin.org/get" ;; has a corresponding entry
+                "https://foobar.org/" ;; has a corresponding entry that is full
                 "https://java.com/"       ;; gets a new entry
                 "https://java.com/about/"]
           dummy-ips (->> (range 4)
@@ -91,11 +92,15 @@
                                (-> (workbench/entry (url/scheme+authority "https://foo.toto") ["/hello/world"])
                                    (assoc :ip-address (nth dummy-ips 2)
                                           :next-fetch (util/from-now -2))))
-                              ;; entry that gets refilled
+                              ;; entry that gets refilled in memory
                               (workbench/add-entry
                                (-> (workbench/entry (url/scheme+authority "https://bar.toto"))
                                    (assoc :ip-address (nth dummy-ips 3)
                                           :next-fetch (util/from-now -1))))))
+          ;; TODO remove 1000
+          _ (swap! workbench (fn [wb] (reduce #(workbench/add-path-query %1 (url/scheme+authority (nth urls 2)) %2)
+                                              wb
+                                              (repeat 1000 "/get"))))
           ready-urls (disk-flow-receiver/disk-flow-receiver (serializer/string-byte-serializer))
           sieve (mercator-sieve/mercator-seive true (util/temp-dir "tmp-sieve") 128 32
                                                32 ready-urls (serializer/string-byte-serializer)
@@ -129,9 +134,9 @@
       (swap! runtime-config assoc :ramper/runtime-stop true)
       (is (true? (async/<!! thread)))
       (is (= 1 (count @new-entries)))
-      (is (= (url/scheme+authority (nth urls 2))
+      (is (= (url/scheme+authority (nth urls 3))
              (:scheme+authority (peek @new-entries))))
       (is (= 2 (count (:path-queries (peek @new-entries)))))
       (is (= 1 (virtual/on-disk virtualizer)))
-      (is (= 1 (virtual/count virtualizer (workbench/entry (url/scheme+authority (second urls))))))
-      (is (= 4 (workbench/nb-workbench-entries @workbench))))))
+      (is (= 1 (virtual/count virtualizer (workbench/entry (url/scheme+authority (nth urls 2))))))
+      (is (= 5 (workbench/nb-workbench-entries @workbench))))))

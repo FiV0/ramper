@@ -145,12 +145,14 @@
                 (do
                   ;; stopping here when flushing
                   (locking sieve)
-                  (cond-let [entry (queue-utils/dequeue! refill-queue)]
+                  (cond-let [{:keys [scheme+authority] :as entry} (queue-utils/dequeue! refill-queue)]
                             (let [entry-size (-> entry :path-queries count)
                                   virtual-empty (= 0 (virtual/count virtualizer entry))]
                               (cond
                                 ;; nothing on disk and entry is empty
-                                (and (= 0 entry-size) virtual-empty)
+                                (and (= 0 entry-size)
+                                     virtual-empty
+                                     (not (workbench/queued-path-queries? @workbench scheme+authority)))
                                 (do
                                   (log/info :distributor/purge {:visit-state (dissoc entry :path-queries)})
                                   (swap! workbench workbench/purge-entry entry)
