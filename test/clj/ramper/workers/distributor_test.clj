@@ -20,13 +20,19 @@
 (deftest enlarge-front-test
   (testing "enlarge-front by itself"
     (let [urls ["https://clojure.org/about/rationale/" ;; already to many urls
-                "https://httpbin.org/get" ;; has a corresponding visit-state
-                "https://java.com/"       ;; gets a new visit-state
+                "https://httpbin.org/get" ;; has a corresponding entry
+                "https://foobar.org/" ;; has a corresponding entry that is full
+                "https://java.com/"       ;; gets a new entry
                 "https://java.com/about/"]
           workbench (atom (-> (workbench/workbench)
                               (workbench/add-entry
                                (assoc (workbench/entry (url/scheme+authority (second urls)))
                                       :ip-address (InetAddress/getByAddress (byte-array 4))))))
+          ;; TODO remove 1000
+          _ (swap! workbench (fn [wb] (reduce #(workbench/add-path-query %1 (url/scheme+authority (nth urls 2)) %2)
+                                              wb
+                                              (repeat 1000 "/get"))))
+          ;; _ (println @workbench #_(count (workbench/queued-path-queries @workbench (url/scheme+authority (nth urls 2)))))
           ready-urls (disk-flow-receiver/disk-flow-receiver (serializer/string-byte-serializer))
           _ (do
               (flow-receiver/prepare-to-append ready-urls)
@@ -46,15 +52,15 @@
       (Thread/sleep 100)
       (is (= {:deleted-from-sieve 1
               :from-sieve-to-virtualizer 1
-              :from-sieve-to-workbench 2}
+              :from-sieve-to-workbench 3}
              new-stats))
       (is (= 1 (count @new-entries)))
-      (is (= (url/scheme+authority (nth urls 2))
+      (is (= (url/scheme+authority (nth urls 3))
              (:scheme+authority (peek @new-entries))))
       (is (= 2 (count (:path-queries (peek @new-entries)))))
       (is (= 1 (virtual/on-disk virtualizer)))
-      (is (= 1 (virtual/count virtualizer (workbench/entry (url/scheme+authority (second urls))))))
-      (is (= 2 (count (:base->path-queries @workbench)))))))
+      (is (= 1 (virtual/count virtualizer (workbench/entry (url/scheme+authority (nth urls 2))))))
+      (is (= 3 (count (:base->path-queries @workbench)))))))
 
 (defn- create-dummy-ip [s]
   (let [ba (byte-array 4)]
@@ -97,7 +103,6 @@
           _ (do
               (run! #(sieve/enqueue sieve %) urls)
               (sieve/flush sieve))
-          todo-queue (atom clojure.lang.PersistentQueue/EMPTY)
           refill-queue (atom (into clojure.lang.PersistentQueue/EMPTY (repeatedly 3 #(workbench/dequeue-entry! workbench))))
           virtualizer (virtual/workbench-virtualizer (util/temp-dir "tmp-virtualizer"))
           ;; TODO these dummy visit state are awkward
@@ -112,7 +117,7 @@
           scheme+authority-to-count (atom {(url/scheme+authority (first urls)) 3})
           new-entries (atom clojure.lang.PersistentQueue/EMPTY)
           path-queries-in-queues (atom 5)
-          thread-data {:workbench workbench :todo-queue todo-queue
+          thread-data {:workbench workbench
                        :refill-queue refill-queue :stats-chan (async/chan (async/sliding-buffer 3))
                        :virtualizer virtualizer :sieve sieve
                        :runtime-config runtime-config :ready-urls ready-urls

@@ -69,6 +69,11 @@
   [{:keys [base->path-queries] :as _workbench} scheme+authority]
   (seq (get base->path-queries scheme+authority)))
 
+(defn queued-path-queries
+  "Returns the queued path-queries for a `scheme+authority`."
+  [{:keys [base->path-queries] :as _workbench} scheme+authority]
+  (get base->path-queries scheme+authority))
+
 (defn peek-entry
   "Returns the next entry that is available in the `workbench`, nil
   if there is none available."
@@ -113,4 +118,4 @@
    {:ramper/keys [_ip-delay _scheme+authority-delay] :as _runtime-config}
    _required-front-size]
   ;; TODO
-  500)
+  1000)
