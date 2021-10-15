@@ -20,7 +20,7 @@
 (defn entry
   ([scheme+authority] (entry scheme+authority []))
   ([scheme+authority path-queries]
-   (->Entry scheme+authority nil nil nil nil 0 (into clojure.lang.PersistentQueue/EMPTY path-queries))))
+   (->Entry scheme+authority nil 0 nil nil 0 (into clojure.lang.PersistentQueue/EMPTY path-queries))))
 
 (defn first-url [{:keys [scheme+authority path-queries]}]
   (when-let [path-query (peek path-queries)]
