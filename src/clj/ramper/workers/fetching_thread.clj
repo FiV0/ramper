@@ -199,8 +199,7 @@
           (if-let [entry (pq/dequeue! todo-queue)]
             (let [start-time (System/currentTimeMillis)]
               (loop [e entry]
-                ;; (Thread/sleep 1000)
-                (log/info :entry {:e e :queue (-> e :path-queries seq)})
+                (log/trace :entry {:e e})
                 (if (and (workbench/first-url e)
                          (<= (- start-time (System/currentTimeMillis))
                              (:ramper/keepalive-time @runtime-config))
