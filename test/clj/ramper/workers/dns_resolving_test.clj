@@ -1,8 +1,7 @@
 (ns ramper.workers.dns-resolving-test
   (:require [clojure.test :refer [deftest is testing]]
-            [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench2 :as workbench]
             [ramper.frontier.workbench.ip-store :as ip-store]
-            [ramper.frontier.workbench.visit-state :as visit-state]
             [ramper.util :as util]
             [ramper.util.delay-queue :as delay-queue]
             [ramper.util.thread :as thread-util]
@@ -26,17 +25,17 @@
           wb (atom (workbench/workbench))
           ip-store (atom (ip-store/ip-store))
           unknown-hosts (atom (delay-queue/delay-queue))
-          new-visit-states (atom clojure.lang.PersistentQueue/EMPTY)
-          vs1 (-> (visit-state/visit-state (url/scheme+authority "https://finnvolkel.com"))
+          new-entries (atom clojure.lang.PersistentQueue/EMPTY)
+          vs1 (-> (workbench/entry (url/scheme+authority "https://finnvolkel.com"))
                   (assoc :next-fetch (util/from-now 90)))
-          vs2-bad (visit-state/visit-state (url/scheme+authority "http://asdf.asdf"))
-          vs3 (-> (visit-state/visit-state (url/scheme+authority "https://news.ycombinator.com"))
+          vs2-bad (workbench/entry (url/scheme+authority "http://asdf.asdf"))
+          vs3 (-> (workbench/entry (url/scheme+authority "https://news.ycombinator.com"))
                   (assoc :next-fetch (util/from-now 100)))
-          _ (swap! new-visit-states into [vs1 vs2-bad vs3])
+          _ (swap! new-entries into [vs1 vs2-bad vs3])
           arg-map {:dns-resolver dns-resolver
                    :workbench wb
                    :unknown-hosts unknown-hosts
-                   :new-visit-states new-visit-states
+                   :new-entries new-entries
                    :ip-store ip-store}
           tw1 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 1))
           tw2 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 2))]
@@ -47,10 +46,10 @@
       (is (true? (thread-util/stopped? tw2)))
       (is (= 1 (count @unknown-hosts)))
       (is (= 2 (workbench/nb-workbench-entries @wb)))
-      (let [vs1-dequeued (workbench/peek-visit-state @wb)]
+      (let [vs1-dequeued (workbench/peek-entry @wb)]
         (is (= "https://finnvolkel.com" (-> vs1-dequeued :scheme+authority str)))
         (is (not (nil? (-> vs1-dequeued :ip-address)))))
-      (workbench/dequeue-visit-state! wb)
-      (let [vs3-dequeued (workbench/peek-visit-state @wb)]
+      (workbench/dequeue-entry! wb)
+      (let [vs3-dequeued (workbench/peek-entry @wb)]
         (is (= "https://news.ycombinator.com" (-> vs3-dequeued :scheme+authority str)))
         (is (not (nil? (-> vs3-dequeued :ip-address))))))))

@@ -4,7 +4,7 @@
             [lambdaisland.uri :as uri]
             [io.pedestal.log :as log]
             [ramper.constants :as constants]
-            [ramper.frontier.workbench :as workbench]
+            [ramper.frontier.workbench2 :as workbench]
             [ramper.frontier.workbench.ip-store :as ip-store]
             [ramper.util :as util]
             [ramper.util.thread :as thread-utils]
@@ -79,44 +79,44 @@
       ip-address)))
 
 (defn dns-thread [{:keys [dns-resolver workbench unknown-hosts
-                          new-visit-states ip-store] :as _thread-data}
+                          new-entries ip-store] :as _thread-data}
                   index stop-chan]
   (thread-utils/set-thread-name (str the-ns-name "-" index))
   (try
     (loop [i 0]
       (when-not (async/poll! stop-chan)
         ;; maybe add a timeout somewhere as this otherwise might put
-        ;; too much pressure on new-visit-states
-        (if-let [{:keys [retries] :as visit-state} (or (delay-queue/dequeue! unknown-hosts)
-                                                       (pq/dequeue! new-visit-states))]
+        ;; too much pressure on new-entries
+        (if-let [{:keys [retries] :as entry} (or (delay-queue/dequeue! unknown-hosts)
+                                                 (pq/dequeue! new-entries))]
           (do
-            (log/trace :dns-thread {:host (-> visit-state :scheme+authority uri/uri :host)})
-            (if-let [host (-> visit-state :scheme+authority uri/uri :host)]
+            (log/trace :dns-thread {:host (-> entry :scheme+authority uri/uri :host)})
+            (if-let [host (-> entry :scheme+authority uri/uri :host)]
               (try
                 ;; TODO should we maybe store InetAddress4 format?
                 (let [ip-address (get-ip-address host ip-store dns-resolver)]
-                  (swap! workbench workbench/add-visit-state (-> visit-state
-                                                                 (assoc :ip-address ip-address)
-                                                                 (assoc :last-exception nil))))
+                  (swap! workbench workbench/add-entry (-> entry
+                                                           (assoc :ip-address ip-address)
+                                                           (assoc :last-exception nil))))
                 (catch UnknownHostException _e
                   (log/warn :unknown-host-ex {:host host
-                                              :visit-state visit-state})
-                  (let [{:keys [retries] :as visit-state}
-                        (-> visit-state
+                                              :entry entry})
+                  (let [{:keys [retries] :as entry}
+                        (-> entry
                             (assoc :retries
-                                   (if (= (:last-exception visit-state) UnknownHostException)
+                                   (if (= (:last-exception entry) UnknownHostException)
                                      (inc retries)
                                      0))
                             (assoc :last-exception UnknownHostException))]
                     (when (< retries (constants/get-exception-to-max-retries UnknownHostException))
                       (let [delay (bit-shift-left (constants/get-exception-to-wait-time UnknownHostException) retries)
                             next-fetch (util/from-now delay)
-                            visit-state (assoc visit-state :next-fetch next-fetch)]
-                        (log/info :retry-dns-resolution {:delay delay :visit-state visit-state})
-                        (swap! unknown-hosts conj [visit-state next-fetch])))
-                    ;; o/w the visit-state gets purged by garbage collection
+                            entry (assoc entry :next-fetch next-fetch)]
+                        (log/info :retry-dns-resolution {:delay delay :entry entry})
+                        (swap! unknown-hosts conj [entry next-fetch])))
+                    ;; o/w the entry gets purged by garbage collection
                     )))
-              (log/warn :scheme+authority-no-host {:scheme+authority (str (:scheme+authority visit-state))}))
+              (log/warn :scheme+authority-no-host {:scheme+authority (str (:scheme+authority entry))}))
             (recur 0))
           (let [time (bit-shift-left 1 (max 10 i))
                 timeout-chan (async/timeout time)]
