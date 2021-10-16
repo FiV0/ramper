@@ -13,6 +13,12 @@
   (:import (java.io IOException)
            (java.nio BufferOverflowException)))
 
+(defn create-new-urls [base-url links]
+  (->> links
+       (map #(uri/join base-url (uri/uri %)))
+       (map url/normalize)
+       distinct))
+
 ;; TODO schedule filter
 ;; TODO parse filter
 ;; TODO hash digests
@@ -43,8 +49,7 @@
         ;; TODO add parsers here
         ;; TODO don't parse if not html
         urls (try
-               (->> response :body (extraction/html->links :jericho)
-                    (map #(uri/join url (uri/uri %))))
+               (create-new-urls url (extraction/html->links :jericho (:body response)))
                (catch BufferOverflowException _e
                  (log/warn :buffer-overflow {:url url}))
                (catch IOException e

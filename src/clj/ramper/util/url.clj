@@ -46,8 +46,11 @@
 (defn normalize
   "Normalizes an `uri-like` object."
   [uri-like]
-  (let [uri (-> (uri/uri uri-like) normalize/normalize)]
-    (dissoc uri :fragment)))
+  (-> (uri/uri uri-like)
+      normalize/normalize
+      (assoc :fragment nil
+             :user nil
+             :password nil)))
 
 (defn to-byte-array
   "Turns an `uri` into a byte-array."
