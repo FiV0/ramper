@@ -95,6 +95,7 @@
   </dependencies>
   <build>
     <sourceDirectory>src/java</sourceDirectory>
+    <testSourceDirectory>test/java</testSourceDirectory>
     <pluginManagement>
       <plugins>
         <plugin>
