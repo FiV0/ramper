@@ -1,6 +1,7 @@
 package ramper.frontier;
 
 import java.util.concurrent.DelayQueue;
+import java.util.concurrent.TimeUnit;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
@@ -10,10 +11,13 @@ public class Workbench3 {
     /** The workbench. */
     private final DelayQueue<Entry> entries;
 
-
     public Workbench3(){
         this.schemeAuthority2Entry = new Object2ObjectOpenHashMap<>();
         this.entries = new DelayQueue<>();
+    }
+
+    public boolean schemeAuthorityPresent(String schemeAuthority){
+        return schemeAuthority2Entry.containsKey(schemeAuthority);
     }
 
     public Entry getEntry(String schemeAuthority){
@@ -26,6 +30,7 @@ public class Workbench3 {
     }
 
     public void addEntry(Entry entry){
+        assert entry.getIpAddress() != null;
         entries.add(entry);
     }
 
@@ -39,6 +44,10 @@ public class Workbench3 {
         final Entry entry = entries.take();
         assert ! entry.isEmpty();
         return entry;
+    }
+
+    public Entry popEntry(long timeout) throws InterruptedException {
+        return entries.poll(timeout, TimeUnit.MILLISECONDS);
     }
 
     public boolean purgeEntry(Entry entry){

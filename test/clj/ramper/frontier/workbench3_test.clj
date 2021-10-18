@@ -1,0 +1,71 @@
+(ns ramper.frontier.workbench3-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [ramper.util :as util])
+  (:import (java.net InetAddress)
+           (ramper.frontier Workbench3)))
+
+(defn- get-address [host]
+  (-> (InetAddress/getAllByName host)
+      first))
+
+(def ip-addrs (map get-address ["127.0.0.1" "127.0.0.2" "127.0.0.3"]))
+
+(deftest workbench-simple-test
+  (testing "workbench testing"
+    (let [wb (Workbench3.)
+          entry1 (doto (.getEntry wb "http://foo.bar")
+                   (.addPathQuery "/path1")
+                   (.addPathQuery "/path2")
+                   (.setIpAddress (first ip-addrs))
+                   (.setNextFetch (util/from-now 300)))
+          entry2 (doto (.getEntry wb "http://foo.bla")
+                   (.addPathQuery "/path1")
+                   (.addPathQuery "/path2")
+                   (.setIpAddress (second ip-addrs))
+                   (.setNextFetch (util/from-now 200)))
+          entry3 (doto (.getEntry wb "http://foo.toto")
+                   (.addPathQuery "/path1")
+                   (.addPathQuery "/path2")
+                   (.setIpAddress (first (nnext ip-addrs)))
+                   (.setNextFetch (util/from-now 400)))
+          entry4 (doto (.getEntry wb "http://foo.cofefe")
+                   (.addPathQuery "/path1")
+                   (.addPathQuery "/path2")
+                   (.setIpAddress (second ip-addrs))
+                   (.setNextFetch (util/from-now 500)))]
+      (run! #(.addEntry wb %) [entry1 entry2 entry3 entry4])
+      (is (= 4 (.numberOfEntries wb)) "wrong number of workbench entries")
+      (is (= entry1 (.getEntry wb "http://foo.bar")) "missing scheme+authority")
+      (Thread/sleep 200)
+      (is (= entry2 (.popEntry wb))
+          "incorrect first popped entry")
+      (Thread/sleep 100)
+      (is (= entry1 (.popEntry wb))
+          "incorrect second popped entry")
+      (is (nil? (.popEntry wb 0))
+          "there should be no ready entry")
+      (Thread/sleep 100)
+      (is (= entry3 (.popEntry wb))
+          "incorrect third popped entry")
+      (Thread/sleep 100)
+      (.addEntry wb (doto entry2 (.setNextFetch (util/from-now 200))))
+      (is (= entry4 (.popEntry wb))
+          "incorrect fourth peeked entry after readding of popped entry")
+      (is (nil? (.popEntry wb 0))
+          "there should be no ready entry")
+      (is (true? (.purgeEntry wb entry2)))
+      (is (= 3 (.numberOfEntries wb))
+          "number of active workbench entries not correct")
+      (is (false? (.schemeAuthorityPresent wb (.-schemeAuthority entry2)))))))
+
+(deftest workbench-purge-test
+  (testing "workbench purge testing"
+    (let [wb (Workbench3.)
+          entry (doto (.getEntry wb "http://foo.bar")
+                  (.addPathQuery "/path1")
+                  (.setIpAddress (first ip-addrs))
+                  (.setNextFetch (util/from-now 300)))]
+      (doto wb (.addEntry entry))
+      (is (nil? (.popEntry wb 0)))
+      (is (true? (.purgeEntry wb entry)))
+      (is (zero? (.numberOfEntries wb))))))
