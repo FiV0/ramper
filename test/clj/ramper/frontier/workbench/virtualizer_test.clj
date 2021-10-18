@@ -1,39 +1,43 @@
 (ns ramper.frontier.workbench.virtualizer-test
   (:require [clojure.test :refer [deftest is testing]]
             [ramper.frontier.workbench.virtualizer :as virtualizer]
-            [ramper.frontier.workbench.visit-state :as vs]
             [ramper.util :as util]
             [ramper.util.url :as url]
-            [ramper.util.url-factory :as url-factory]))
+            [ramper.util.url-factory :as url-factory])
+  (:import (ramper.frontier Entry)))
+
+(defn dequeue-entry [entry]
+  (for [_ (range (.size entry))]
+    (.getPathQuery entry)))
 
 (deftest simple-virtualizer-test
   (let [virtual (virtualizer/workbench-virtualizer (util/temp-dir "virtualizer"))
         sa1 (-> (url-factory/rand-scheme+authority-seq 1000) distinct)
         sa2 (->> (url-factory/rand-scheme+authority-seq 1000) (take (count sa1)))
-        vs1 (vs/visit-state (-> sa1 first url/base str))
-        vs2 (vs/visit-state (-> sa2 first url/base str))]
+        entry1 (Entry. (-> sa1 first url/base str))
+        entry2 (Entry. (-> sa2 first url/base str))]
     (testing "virtualizer single-threaded with 2 scheme+authority pairs"
       (loop [sa1 sa1 sa2 sa2]
         (when (seq sa1)
-          (virtualizer/enqueue virtual vs1 (first sa1))
-          (virtualizer/enqueue virtual vs2 (first sa2))
+          (virtualizer/enqueue virtual entry1 (first sa1))
+          (virtualizer/enqueue virtual entry2 (first sa2))
           (recur (rest sa1) (rest sa2))))
-      (is (= (virtualizer/count virtual vs1) (count sa1)))
-      (is (= (virtualizer/count virtual vs2) (count sa2)))
-      (loop [vs1 vs1 vs2 vs2]
-        (if (pos? (virtualizer/count virtual vs1))
-          (recur (virtualizer/dequeue-path-queries virtual vs1 100)
-                 (virtualizer/dequeue-path-queries virtual vs2 100))
+      (is (= (virtualizer/count virtual entry1) (count sa1)))
+      (is (= (virtualizer/count virtual entry2) (count sa2)))
+      (loop [entry1 entry1 entry2 entry2]
+        (if (pos? (virtualizer/count virtual entry1))
+          (recur (virtualizer/dequeue-path-queries virtual entry1 100)
+                 (virtualizer/dequeue-path-queries virtual entry2 100))
           (do
             (is (= (map #(-> % url/path+queries str) sa1)
-                   (-> vs1 :path-queries seq)))
+                   (dequeue-entry entry1)))
             (is (= (map #(-> % url/path+queries str) sa2)
-                   (-> vs2 :path-queries seq)))))))
+                   (dequeue-entry entry2)))))))
     (testing "virtualizer object equality"
       ;; here we explicitly create the visit state twice
-      (virtualizer/enqueue virtual (vs/visit-state (url/scheme+authority "https://httpbin.org")) "https://httpbin.org/get")
-      (let [new-visit-state (virtualizer/dequeue-path-queries
-                             virtual
-                             (vs/visit-state (url/scheme+authority "https://httpbin.org"))
-                             1)]
-        (is (= "/get" (vs/first-path new-visit-state)))))))
+      (virtualizer/enqueue virtual (Entry. "https://httpbin.org") "https://httpbin.org/get")
+      (let [new-entry (virtualizer/dequeue-path-queries
+                       virtual
+                       (Entry. "https://httpbin.org")
+                       1)]
+        (is (= "/get" (.getPathQuery new-entry)))))))
