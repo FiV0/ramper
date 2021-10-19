@@ -128,10 +128,3 @@
   (log/info :graceful-shutdown {:type :dns-thread
                                 :index index})
   true)
-
-(import '(ramper.frontier Entry))
-
-(Entry. "foobar")
-(.setLastException (Entry. "foobar") UnknownHostException)
-
-(type UnknownHostException)
