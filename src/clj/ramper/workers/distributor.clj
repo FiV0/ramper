@@ -15,11 +15,8 @@
             [ramper.util.thread :as thread-utils]
             [ramper.util.url :as url]))
 
-(defn- front-too-small? [workbench todo-queue required-front-size]
-  (<= (+ (- (workbench/nb-workbench-entries workbench)
-            (count (:broken-visit-states workbench)))
-         (count todo-queue))
-      required-front-size))
+(defn- front-too-small? [workbench required-front-size]
+  (< (.numberOfEntries workbench) required-front-size))
 
 ;; TODO should this be configurable
 (def front-too-small-loop-size 100)
@@ -27,51 +24,55 @@
 (defn enlarge-front
   "Dequeues keys from the sieve (through a flow receiver) and either drops them
   (already too many urls parsed for a domain), add the url to workbench virtualizer
-  (a visit state exists and is in circulation) or creates a new visit state
+  (a workbench entry exists and is in circulation) or creates a new entry
   for new domains.
-
   For the given thread-data map see r.workers.distributor/distributor-thread."
   [{:keys [workbench virtualizer runtime-config scheme+authority-to-count
-           ready-urls new-visit-states] :as _thread-data} stats]
-  (loop [cnt 0 stats stats scheme+authority-to-new-visit-states {}]
+           ready-urls new-entries] :as _thread-data} stats]
+  (loop [cnt 0 stats stats scheme+authority-to-new-entries {}]
     (if (and (< cnt front-too-small-loop-size)
              (pos? (flow-receiver/size ready-urls)))
       (let [url (flow-receiver/dequeue-key ready-urls)
-            scheme+authority (url/scheme+authority url)]
-        (cond-let
-         ;; url gets dropped
-         (not (< (get @scheme+authority-to-count scheme+authority 0)
-                 (:ramper/max-urls-per-scheme+authority @runtime-config)))
-         (recur (inc cnt)
-                (update stats :deleted-from-sieve inc)
-                scheme+authority-to-new-visit-states)
+            scheme+authority (str (url/scheme+authority url))
+            path+query (str (url/path+queries url))]
+        (cond
+          ;; url gets dropped
+          (not (< (get @scheme+authority-to-count scheme+authority 0)
+                  (:ramper/max-urls-per-scheme+authority @runtime-config)))
+          (recur (inc cnt)
+                 (update stats :deleted-from-sieve inc)
+                 scheme+authority-to-new-entries)
 
-         ;; scheme+authority already has a visit-state
-         (workbench/scheme+authority-present? @workbench scheme+authority)
-         ;; TODO make the virtualizer interface better
-         ;; this is unnecessary
-         ;; TODO don't go through disk here when possible
-         (let [dummy-visit-state (visit-state/visit-state scheme+authority)]
-           (virtual/enqueue virtualizer dummy-visit-state url)
-           (recur (inc cnt)
-                  (update stats :from-sieve-to-virtualizer inc)
-                  scheme+authority-to-new-visit-states))
+          ;; scheme+authority already has an entry
+          ;; TODO coordinate with path-query-limit
+          (.schemeAuthorityPresent workbench scheme+authority)
+          (let [entry (.getEntry workbench scheme+authority)]
+            (if (< (.size entry) 1000)
+              (do (.addPathQuery entry path+query)
+                  (recur (inc cnt)
+                         (update stats :from-sieve-to-workbench inc)
+                         scheme+authority-to-new-entries))
+              ;; has an entry but the number of path queries exceeds the limit
+              ;; TODO make the virtualizer interface better
+              ;; this is unnecessary
+              (do
+                (virtual/enqueue virtualizer entry url)
+                (recur (inc cnt)
+                       (update stats :from-sieve-to-virtualizer inc)
+                       scheme+authority-to-new-entries))))
 
-         ;; we create or update a new visit-state
-         :else
-         (recur (inc cnt)
-                (update stats :from-sieve-to-workbench inc)
-                (update scheme+authority-to-new-visit-states
-                        scheme+authority
-                        (fnil #(visit-state/enqueue-path-query % (str (url/path+queries url)))
-                              (visit-state/visit-state scheme+authority))))))
-      (let [visit-states (vals scheme+authority-to-new-visit-states)]
-        ;; signaling to the workbench that these visit-states have been created
-        (loop [vss visit-states]
-          (when-let [[visit-state & vss] vss]
-            (swap! workbench workbench/add-scheme+authority (:scheme+authority visit-state))
-            (recur vss)))
-        (swap! new-visit-states #(into % visit-states))
+          ;; we create or update a new entry
+          ;; TODO with the non persistent workbench we actually always land in the
+          ;; nil case, as the case above will be true afterwards.
+          :else
+          (recur (inc cnt)
+                 (update stats :from-sieve-to-workbench inc)
+                 (update scheme+authority-to-new-entries
+                         scheme+authority
+                         (fnil #(do (.addPathQuery %1 %2) %1) (.getEntry workbench scheme+authority))
+                         path+query))))
+      (do
+        (swap! new-entries into (vals scheme+authority-to-new-entries))
         stats))))
 
 (def ^:private the-ns-name (str *ns*))
@@ -108,7 +109,7 @@
 
   :path-queries-in-queues - an atom wrapping a counter for the number of
   path-queries in visit states."
-  [{:keys [workbench todo-queue refill-queue
+  [{:keys [workbench _todo-queue refill-queue
            virtualizer sieve runtime-config ready-urls
            _scheme+authority-to-count _new-visit-states
            path-queries-in-queues stats-chan] :as thread-data}]
@@ -122,11 +123,11 @@
                           :from-sieve-to-virtualizer 0
                           :from-sieve-to-workbench   0
                           :deleted-from-sieve        0
-                          :visit-states-purged       0}]
+                          :entries-purged       0}]
       (when-not (runtime-config/stop? @runtime-config)
         (let [required-front-size (:ramper/required-front-size @runtime-config)
               workbench-full (frontier/workbench-full? @runtime-config @path-queries-in-queues)
-              front-too-small (front-too-small? @workbench @todo-queue required-front-size)
+              front-too-small (front-too-small? workbench required-front-size)
               now (System/currentTimeMillis)]
           ;; TODO should this only be done at certain time intervals?
           (async/offer! stats-chan stats)
@@ -135,32 +136,30 @@
                 (do
                   ;; stopping here when flushing
                   (locking sieve)
-                  (cond-let [visit-state (queue-utils/dequeue! refill-queue)]
-                            (let [visit-state-size (visit-state/size visit-state)
-                                  virtual-empty (= 0 (virtual/count virtualizer visit-state))]
+                  (cond-let [entry (queue-utils/dequeue! refill-queue)]
+                            (let [entry-size (.size entry)
+                                  virtual-empty (= 0 (virtual/count virtualizer entry))]
                               (cond
                                 ;; nothing on disk and visit-state is empty
-                                (and (= 0 visit-state-size) virtual-empty)
+                                (and (= 0 entry-size) virtual-empty)
                                 (do
-                                  (log/info :distributor/purge {:visit-state (dissoc visit-state :path-queries)})
-                                  (swap! workbench workbench/purge-visit-state visit-state)
-                                  (recur 0 (update stats :visit-states-purged inc)))
+                                  (log/info :distributor/purge {:entry entry})
+                                  (.purgeEntry workbench entry)
+                                  (recur 0 (update stats :entries-purged inc)))
                                 ;; nothing on disk but visit-state still contains urls
                                 virtual-empty
                                 (do
-                                  (log/info :distributor/no-urls {:visit-state (dissoc visit-state :path-queries)})
-                                  (swap! workbench workbench/add-visit-state visit-state)
+                                  (log/info :distributor/no-urls {:entry entry})
+                                  (.addEntry workbench entry)
                                   (recur 0 stats))
                                 ;; we refill the visit state
                                 :else
-                                (let [path-query-limit (workbench/path-query-limit
-                                                        @workbench visit-state @runtime-config required-front-size)
-
-                                      new-visit-state (virtual/dequeue-path-queries
-                                                       virtualizer visit-state path-query-limit)
-                                      new-visit-state-size (visit-state/size new-visit-state)]
-                                  (swap! workbench workbench/add-visit-state new-visit-state)
-                                  (recur 0 (update stats :moved-from-queues + (- new-visit-state-size visit-state-size))))))
+                                (let [path-query-limit (.pathQueryLimit workbench)
+                                      new-entry (virtual/dequeue-path-queries
+                                                 virtualizer entry path-query-limit)
+                                      new-entry-size (.size new-entry)]
+                                  (.addEntry workbench new-entry)
+                                  (recur 0 (update stats :moved-from-queues + (- new-entry-size entry-size))))))
 
                             (and front-too-small
                                  (zero? (flow-receiver/size ready-urls))

@@ -112,4 +112,9 @@ public class Entry implements Delayed {
     public void setNextFetch(long nextFetch) {
         this.nextFetch = nextFetch;
     }
+
+    @Override
+    public synchronized String toString() {
+        return "[" + schemeAuthority + " (" + pathQueries.size() + ")]";
+    }
 }
