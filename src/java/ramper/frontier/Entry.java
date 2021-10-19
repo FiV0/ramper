@@ -78,7 +78,12 @@ public class Entry implements Delayed {
         pathQueries.enqueue(pathQuery);
     }
 
-    public String getPathQuery(){
+    public String peekPathQuery(){
+        assert !isEmpty();
+        return pathQueries.first();
+    }
+
+    public String popPathQuery(){
         assert !isEmpty();
         return pathQueries.dequeue();
     }

@@ -8,7 +8,7 @@
 
 (defn dequeue-entry [entry]
   (for [_ (range (.size entry))]
-    (.getPathQuery entry)))
+    (.popPathQuery entry)))
 
 (deftest simple-virtualizer-test
   (let [virtual (virtualizer/workbench-virtualizer (util/temp-dir "virtualizer"))
@@ -40,4 +40,4 @@
                        virtual
                        (Entry. "https://httpbin.org")
                        1)]
-        (is (= "/get" (.getPathQuery new-entry)))))))
+        (is (= "/get" (.popPathQuery new-entry)))))))
