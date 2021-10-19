@@ -19,7 +19,7 @@ public class Entry implements Delayed {
     /** The cookies of this entry. */
     private Cookie[] cookies;
 
-    private Exception lasException;
+    private Class<?> lastException;
     private int retries;
 
     /** The path+queries that must be visited for this entry. */
@@ -42,12 +42,12 @@ public class Entry implements Delayed {
         this.retries = retries;
     }
 
-    public Exception getLasException() {
-        return lasException;
+    public Class<?> getLastException() {
+        return lastException;
     }
 
-    public void setLasException(Exception lasException) {
-        this.lasException = lasException;
+    public void setLastException(Class<?> lastException) {
+        this.lastException = lastException;
     }
 
     public Cookie[] getCookies() {

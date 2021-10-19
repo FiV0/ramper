@@ -9,7 +9,8 @@
             [ramper.util.url :as url]
             [ramper.workers.dns-resolving :as dns-resolving])
   (:import (java.util Arrays)
-           (org.xbill.DNS Address)))
+           (org.xbill.DNS Address)
+           (ramper.frontier Workbench3)))
 
 (deftest global-java-dns-resolver-test
   (testing "global-java-dns-resolver"
@@ -23,20 +24,20 @@
 (deftest dns-thread-test
   (testing "ramper.worker.dns-resolving/dns-thread"
     (let [dns-resolver (dns-resolving/java-dns-resolver)
-          wb (atom (workbench/workbench))
+          wb (Workbench3.)
           ip-store (atom (ip-store/ip-store))
           unknown-hosts (atom (delay-queue/delay-queue))
-          new-visit-states (atom clojure.lang.PersistentQueue/EMPTY)
-          vs1 (-> (visit-state/visit-state (url/scheme+authority "https://finnvolkel.com"))
-                  (assoc :next-fetch (util/from-now 90)))
-          vs2-bad (visit-state/visit-state (url/scheme+authority "http://asdf.asdf"))
-          vs3 (-> (visit-state/visit-state (url/scheme+authority "https://news.ycombinator.com"))
-                  (assoc :next-fetch (util/from-now 100)))
-          _ (swap! new-visit-states into [vs1 vs2-bad vs3])
+          new-entries (atom clojure.lang.PersistentQueue/EMPTY)
+          entry1 (doto (.getEntry wb "https://finnvolkel.com")
+                   (.setNextFetch (util/from-now 90)))
+          entry2-bad (.getEntry wb "http://asdf.asdf")
+          entry3 (doto (.getEntry wb "https://news.ycombinator.com")
+                   (.setNextFetch (util/from-now 100)))
+          _ (swap! new-entries into [entry1 entry2-bad entry3])
           arg-map {:dns-resolver dns-resolver
                    :workbench wb
                    :unknown-hosts unknown-hosts
-                   :new-visit-states new-visit-states
+                   :new-entries new-entries
                    :ip-store ip-store}
           tw1 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 1))
           tw2 (thread-util/thread-wrapper (partial dns-resolving/dns-thread arg-map 2))]
@@ -46,11 +47,10 @@
       (is (true? (thread-util/stopped? tw1)))
       (is (true? (thread-util/stopped? tw2)))
       (is (= 1 (count @unknown-hosts)))
-      (is (= 2 (workbench/nb-workbench-entries @wb)))
-      (let [vs1-dequeued (workbench/peek-visit-state @wb)]
-        (is (= "https://finnvolkel.com" (-> vs1-dequeued :scheme+authority str)))
-        (is (not (nil? (-> vs1-dequeued :ip-address)))))
-      (workbench/dequeue-visit-state! wb)
-      (let [vs3-dequeued (workbench/peek-visit-state @wb)]
-        (is (= "https://news.ycombinator.com" (-> vs3-dequeued :scheme+authority str)))
-        (is (not (nil? (-> vs3-dequeued :ip-address))))))))
+      (is (= 3 (.numberOfEntries wb)))
+      (let [entry1-dequeued (.popEntry wb)]
+        (is (= "https://finnvolkel.com" (.-schemeAuthority entry1-dequeued)))
+        (is (not (nil? (.getIpAddress entry1-dequeued)))))
+      (let [entry3-dequeued (.popEntry wb)]
+        (is (= "https://news.ycombinator.com" (.-schemeAuthority entry3-dequeued)))
+        (is (not (nil? (.getIpAddress entry3-dequeued))))))))

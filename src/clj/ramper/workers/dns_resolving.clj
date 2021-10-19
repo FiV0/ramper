@@ -12,7 +12,8 @@
             [ramper.util.persistent-queue :as pq])
   (:import (java.net InetAddress UnknownHostException)
            (org.apache.http.conn DnsResolver)
-           (org.xbill.DNS Address)))
+           (org.xbill.DNS Address)
+           (ramper.frontier Entry Workbench3)))
 
 (def loopback (InetAddress/getByAddress (byte-array '(127 0 0 1))))
 
@@ -79,7 +80,7 @@
       ip-address)))
 
 (defn dns-thread [{:keys [dns-resolver workbench unknown-hosts
-                          new-visit-states ip-store] :as _thread-data}
+                          new-entries ip-store] :as _thread-data}
                   index stop-chan]
   (thread-utils/set-thread-name (str the-ns-name "-" index))
   (try
@@ -87,36 +88,34 @@
       (when-not (async/poll! stop-chan)
         ;; maybe add a timeout somewhere as this otherwise might put
         ;; too much pressure on new-visit-states
-        (if-let [{:keys [retries] :as visit-state} (or (delay-queue/dequeue! unknown-hosts)
-                                                       (pq/dequeue! new-visit-states))]
+        (if-let [^Entry entry (or (delay-queue/dequeue! unknown-hosts) (pq/dequeue! new-entries))]
           (do
-            (log/trace :dns-thread {:host (-> visit-state :scheme+authority uri/uri :host)})
-            (if-let [host (-> visit-state :scheme+authority uri/uri :host)]
+            (log/trace :dns-thread {:host (-> (.-schemeAuthority entry) uri/uri :host)})
+            (if-let [host (-> (.-schemeAuthority entry) uri/uri :host)]
               (try
                 ;; TODO should we maybe store InetAddress4 format?
                 (let [ip-address (get-ip-address host ip-store dns-resolver)]
-                  (swap! workbench workbench/add-visit-state (-> visit-state
-                                                                 (assoc :ip-address ip-address)
-                                                                 (assoc :last-exception nil))))
+                  (.addEntry ^Workbench3 workbench
+                             (doto entry
+                               (.setIpAddress ip-address)
+                               (.setLastException nil))))
                 (catch UnknownHostException _e
                   (log/warn :unknown-host-ex {:host host
-                                              :visit-state visit-state})
-                  (let [{:keys [retries] :as visit-state}
-                        (-> visit-state
-                            (assoc :retries
-                                   (if (= (:last-exception visit-state) UnknownHostException)
-                                     (inc retries)
-                                     0))
-                            (assoc :last-exception UnknownHostException))]
+                                              :visit-state entry})
+                  (let [last-exception (.getLastException entry)
+                        retries (.getRetries entry)
+                        entry (doto entry
+                                (.setRetries (if (= last-exception UnknownHostException) (inc retries) 0))
+                                (.setLastException UnknownHostException))]
                     (when (< retries (constants/get-exception-to-max-retries UnknownHostException))
                       (let [delay (bit-shift-left (constants/get-exception-to-wait-time UnknownHostException) retries)
                             next-fetch (util/from-now delay)
-                            visit-state (assoc visit-state :next-fetch next-fetch)]
-                        (log/info :retry-dns-resolution {:delay delay :visit-state visit-state})
-                        (swap! unknown-hosts conj [visit-state next-fetch])))
+                            entry (doto entry (.setNextFetch next-fetch))]
+                        (log/info :retry-dns-resolution {:delay delay :visit-state entry})
+                        (swap! unknown-hosts conj [entry next-fetch])))
                     ;; o/w the visit-state gets purged by garbage collection
                     )))
-              (log/warn :scheme+authority-no-host {:scheme+authority (str (:scheme+authority visit-state))}))
+              (log/warn :scheme+authority-no-host {:scheme+authority (.-schemeAuthority entry)}))
             (recur 0))
           (let [time (bit-shift-left 1 (max 10 i))
                 timeout-chan (async/timeout time)]
@@ -129,3 +128,10 @@
   (log/info :graceful-shutdown {:type :dns-thread
                                 :index index})
   true)
+
+(import '(ramper.frontier Entry))
+
+(Entry. "foobar")
+(.setLastException (Entry. "foobar") UnknownHostException)
+
+(type UnknownHostException)
