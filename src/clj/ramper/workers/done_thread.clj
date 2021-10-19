@@ -5,7 +5,8 @@
             [ramper.frontier.workbench.visit-state :as visit-state]
             [ramper.runtime-configuration :as runtime-config]
             [ramper.util.persistent-queue :as pq]
-            [ramper.util.thread :as thread-utils]))
+            [ramper.util.thread :as thread-utils])
+  (:import (ramper.frontier Entry Workbench3)))
 
 (def ^:private the-ns-name (str *ns*))
 
@@ -29,33 +30,34 @@
 
   :virtualizer - a workbench virtualizer, see also
   ramper.frontier.workbench.virtualizer"
-  [{:keys [runtime-config workbench done-queue
+  [{:keys [runtime-config ^Workbench3 workbench done-queue
            refill-queue virtualizer] :as _thread_data}]
   (thread-utils/set-thread-name the-ns-name)
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
   (try
     (loop [i 0]
       (when-not (runtime-config/stop? @runtime-config)
-        (if-let [{:keys [next-fetch] :as visit-state} (pq/dequeue! done-queue)]
-          (do
+        (if-let [^Entry entry (pq/dequeue! done-queue)]
+          (let [next-fetch (.getNextFetch entry)
+                size (.size entry)]
             (cond
               ;; purge condition
               (= Long/MAX_VALUE next-fetch)
-              (swap! workbench workbench/purge-visit-state visit-state)
+              (.purgeEntry workbench entry)
 
               ;; refill condition
               ;; TODO: test if this needs to pass through the distributor, why not go directly
               ;; to the workbench
-              (and (= 0 (visit-state/size visit-state))
-                   (< 0 (virtual/count virtualizer visit-state)))
-              (swap! refill-queue conj visit-state)
+              (and (= 0 size)
+                   (< 0 (virtual/count virtualizer entry)))
+              (swap! refill-queue conj entry)
 
               ;; we also purge if there no more urls on disk
-              (= 0 (visit-state/size visit-state))
-              (swap! workbench workbench/purge-visit-state visit-state)
+              (= 0 size)
+              (.purgeEntry workbench entry)
 
               :else
-              (swap! workbench workbench/add-visit-state visit-state))
+              (.addEntry workbench entry))
             (recur 0))
           (do
             (Thread/sleep (bit-shift-left 1 (max i 10)))
