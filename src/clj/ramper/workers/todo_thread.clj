@@ -1,8 +1,8 @@
 (ns ramper.workers.todo-thread
   (:require [io.pedestal.log :as log]
-            [ramper.frontier.workbench :as workbench]
             [ramper.runtime-configuration :as runtime-config]
-            [ramper.util.thread :as thread-utils]))
+            [ramper.util.thread :as thread-utils])
+  (:import (ramper.frontier Entry Workbench3)))
 
 (def ^:private the-ns-name (str *ns*))
 
@@ -22,7 +22,7 @@
 
   :scheme+authority-to-count - an atom wrapping a map from scheme+authority to the
   number of path queries that have passed through the workbench"
-  [{:keys [runtime-config workbench
+  [{:keys [runtime-config ^Workbench3 workbench
            todo-queue scheme+authority-to-count] :as _thread_data}]
   (thread-utils/set-thread-name the-ns-name)
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)
@@ -30,10 +30,11 @@
     (while (not (runtime-config/stop? @runtime-config))
       ;; TODO maybe make the dequeue loop explict to enable logging
       ;; TODO maybe enable backoff, check if loop spins
-      (when-let [{:keys [scheme+authority] :as visit-state} (workbench/dequeue-visit-state! workbench)]
-        (assert (<= (get @scheme+authority-to-count scheme+authority 0)
-                    (:ramper/max-urls-per-scheme+authority @runtime-config)))
-        (swap! todo-queue conj visit-state)))
+      (when-let [^Entry entry (.popEntry workbench 100)]
+        (let [scheme+authority (.-schemeAuthority entry)]
+          (assert (<= (get @scheme+authority-to-count scheme+authority 0)
+                      (:ramper/max-urls-per-scheme+authority @runtime-config)))
+          (swap! todo-queue conj entry))))
     (catch Throwable t
       (log/error :unexpected-ex {:ex t})))
   (log/info :todo-thread :graceful-shutdown)

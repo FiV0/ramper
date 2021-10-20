@@ -6,7 +6,8 @@
             [ramper.workers.todo-thread :as todo-thread]
             [ramper.util :as util]
             [ramper.util.url :as url])
-  (:import (java.net InetAddress)))
+  (:import (java.net InetAddress)
+           (ramper.frontier Entry Workbench3)))
 
 (defn- create-dummy-ip [s]
   (let [ba (byte-array 4)]
@@ -21,16 +22,17 @@
     (let [dummy-ip1 (create-dummy-ip [1 2 3 4])
           dummy-ip2 (create-dummy-ip [2 3 4 5])
           dummy-ip3 (create-dummy-ip [3 4 5 6])
-          vs1 (-> (visit-state/visit-state (url/scheme+authority "https://finnvolkel.com"))
-                  (assoc :next-fetch (util/from-now 10)
-                         :ip-address dummy-ip1))
-          vs2 (-> (visit-state/visit-state (url/scheme+authority "https://clojure.org"))
-                  (assoc :next-fetch (util/from-now 30)
-                         :ip-address dummy-ip2))
-          vs3 (-> (visit-state/visit-state (url/scheme+authority "https://news.ycombinator.com"))
-                  (assoc :next-fetch (util/from-now 20)
-                         :ip-address dummy-ip3))
-          wb (atom (reduce workbench/add-visit-state (workbench/workbench) [vs1 vs2 vs3]))
+          wb (Workbench3.)
+          entry1  (doto (.getEntry wb "https://finnvolkel.com")
+                    (.setNextFetch (util/from-now 10))
+                    (.setIpAddress dummy-ip1))
+          entry2 (doto (.getEntry wb "https://clojure.org")
+                   (.setNextFetch (util/from-now 30))
+                   (.setIpAddress dummy-ip2))
+          entry3 (doto (.getEntry wb "https://news.ycombinator.com")
+                   (.setNextFetch (util/from-now 20))
+                   (.setIpAddress dummy-ip3))
+          _ (run! #(.addEntry wb %) [entry1 entry2 entry3])
           runtime-config (atom {:ramper/runtime-stop false
                                 :ramper/max-urls-per-scheme+authority 10})
           todo-queue (atom clojure.lang.PersistentQueue/EMPTY)
@@ -46,4 +48,4 @@
       (swap! runtime-config assoc :ramper/runtime-stop true)
       (is (true? (async/<!! thread)))
       (is (= 3 (count @todo-queue)))
-      (is (= (list vs1 vs3 vs2) (map #(dissoc % :locked-entry) @todo-queue))))))
+      (is (= (list entry1 entry3 entry2) (seq @todo-queue))))))
