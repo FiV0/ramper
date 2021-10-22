@@ -11,9 +11,10 @@
             [ramper.util.macros :refer [cond-let]]
             [ramper.util.persistent-queue :as queue-utils]
             [ramper.util.thread :as thread-utils]
-            [ramper.util.url :as url]))
+            [ramper.util.url :as url])
+  (:import (ramper.frontier Entry Workbench3)))
 
-(defn- front-too-small? [workbench required-front-size]
+(defn- front-too-small? [^Workbench3 workbench required-front-size]
   (< (.numberOfEntries workbench) required-front-size))
 
 ;; TODO should this be configurable
@@ -25,7 +26,7 @@
   (a workbench entry exists and is in circulation) or creates a new entry
   for new domains.
   For the given thread-data map see r.workers.distributor/distributor-thread."
-  [{:keys [workbench virtualizer runtime-config scheme+authority-to-count
+  [{:keys [^Workbench3 workbench virtualizer runtime-config scheme+authority-to-count
            ready-urls new-entries] :as _thread-data} stats]
   (loop [cnt 0 stats stats scheme+authority-to-new-entries {}]
     (if (and (< cnt front-too-small-loop-size)
@@ -44,7 +45,7 @@
           ;; scheme+authority already has an entry
           ;; TODO coordinate with path-query-limit
           (.schemeAuthorityPresent workbench scheme+authority)
-          (let [entry (.getEntry workbench scheme+authority)]
+          (let [^Entry entry (.getEntry workbench scheme+authority)]
             (if (< (.size entry) 1000)
               (do (.addPathQuery entry path+query)
                   (recur (inc cnt)
@@ -67,7 +68,7 @@
                  (update stats :from-sieve-to-workbench inc)
                  (update scheme+authority-to-new-entries
                          scheme+authority
-                         (fnil #(do (.addPathQuery %1 %2) %1) (.getEntry workbench scheme+authority))
+                         (fnil #(do (.addPathQuery ^Entry %1 %2) %1) (.getEntry workbench scheme+authority))
                          path+query))))
       (do
         (swap! new-entries into (vals scheme+authority-to-new-entries))
@@ -107,7 +108,7 @@
 
   :path-queries-in-queues - an atom wrapping a counter for the number of
   path-queries in visit states."
-  [{:keys [workbench _todo-queue refill-queue
+  [{:keys [^Workbench3 workbench _todo-queue refill-queue
            virtualizer sieve runtime-config ready-urls
            _scheme+authority-to-count _new-entries
            path-queries-in-queues stats-chan] :as thread-data}]
@@ -128,13 +129,13 @@
               front-too-small (front-too-small? workbench required-front-size)
               now (System/currentTimeMillis)]
           ;; TODO should this only be done at certain time intervals?
-          (async/offer! stats-chan stats)
+          ;; (async/offer! stats-chan stats)
           ;; TODO try to refactor this in one big cond
           (cond (not workbench-full)
                 (do
                   ;; stopping here when flushing
                   (locking sieve)
-                  (cond-let [entry (queue-utils/dequeue! refill-queue)]
+                  (cond-let [^Entry entry (queue-utils/dequeue! refill-queue)]
                             (let [entry-size (.size entry)
                                   virtual-empty (= 0 (virtual/count virtualizer entry))]
                               (cond
@@ -153,8 +154,8 @@
                                 ;; we refill the visit state
                                 :else
                                 (let [path-query-limit (.pathQueryLimit workbench)
-                                      new-entry (virtual/dequeue-path-queries
-                                                 virtualizer entry path-query-limit)
+                                      ^Entry new-entry (virtual/dequeue-path-queries
+                                                        virtualizer entry path-query-limit)
                                       new-entry-size (.size new-entry)]
                                   (.addEntry workbench new-entry)
                                   (recur 0 (update stats :moved-from-queues + (- new-entry-size entry-size))))))
