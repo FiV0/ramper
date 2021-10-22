@@ -218,7 +218,8 @@
                       (cond
                         ;; no error case
                         fetched-data
-                        (let [cookies (limit-cookies (seq (.getCookies cookie-store)) cookies-max-byte-size)]
+                        (let [cookies (->> (limit-cookies (seq (.getCookies cookie-store)) cookies-max-byte-size)
+                                           (into-array org.apache.http.cookie.Cookie))]
                           (s/assert ::fetched-data/fetched-data fetched-data)
                           (swap! results-queue conj fetched-data)
                           (when (seq cookies) (.setCookies e (to-array cookies)))

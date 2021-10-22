@@ -87,7 +87,7 @@
     (loop [i 0]
       (when-not (async/poll! stop-chan)
         ;; maybe add a timeout somewhere as this otherwise might put
-        ;; too much pressure on new-visit-states
+        ;; too much pressure on new-entries
         (if-let [^Entry entry (or (delay-queue/dequeue! unknown-hosts) (pq/dequeue! new-entries))]
           (do
             (log/trace :dns-thread {:host (-> (.-schemeAuthority entry) uri/uri :host)})

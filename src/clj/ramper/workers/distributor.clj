@@ -102,14 +102,14 @@
   :scheme+authority-to-count - an atom wrapping a mapping from scheme+authority to the
   number of path queries that have passed through the workbench.
 
-  :new-visit-state - an atom wrapping a clojure.lang.PersistentQueue to which the new
+  :new-entries - an atom wrapping a clojure.lang.PersistentQueue to which the new
   visit states (without resolved ip-address) will be enqueued.
 
   :path-queries-in-queues - an atom wrapping a counter for the number of
   path-queries in visit states."
   [{:keys [workbench _todo-queue refill-queue
            virtualizer sieve runtime-config ready-urls
-           _scheme+authority-to-count _new-visit-states
+           _scheme+authority-to-count _new-entries
            path-queries-in-queues stats-chan] :as thread-data}]
   (thread-utils/set-thread-name the-ns-name)
   (thread-utils/set-thread-priority Thread/MAX_PRIORITY)

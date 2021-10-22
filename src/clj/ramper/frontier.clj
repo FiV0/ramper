@@ -14,7 +14,8 @@
             [ramper.util.delay-queue :as delay-queue]
             [ramper.util.lru :as lru]
             [ramper.util.lru-immutable :as lru-immutable]
-            [ramper.util.url :as url]))
+            [ramper.util.url :as url])
+  (:import (ramper.frontier Workbench3)))
 
 ;; TODO maybe create a frontier that holds all the below datastructures
 ;; and pass that around
@@ -186,7 +187,7 @@
 
 (defrecord Frontier [refill-queue done-queue todo-queue results-queue
                      workbench virtualizer url-cache unknown-hosts
-                     new-visit-states ready-urls sieve store
+                     new-entries ready-urls sieve store
                      path-queries-in-queues urls-crawled scheme+authority-to-count
                      ip-store])
 
@@ -204,7 +205,7 @@
                 (atom clojure.lang.PersistentQueue/EMPTY)
                 (atom clojure.lang.PersistentQueue/EMPTY)
                 (atom clojure.lang.PersistentQueue/EMPTY)
-                (atom (workbench/workbench))
+                (Workbench3.)
                 (workbench-virtualizer-init runtime-config)
                 url-cache
                 (atom (delay-queue/delay-queue))
