@@ -49,12 +49,16 @@
         ;; TODO add parsers here
         ;; TODO don't parse if not html
         urls (try
-               (create-new-urls url (extraction/html->links :jericho (:body response)))
+               (doall (create-new-urls url (extraction/html->links :jericho (:body response))))
                (catch BufferOverflowException _e
                  (log/warn :buffer-overflow {:url url}))
                (catch IOException e
                  (log/warn :io-exception {:url url
-                                          :exception-type (type e)})))]
+                                          :exception-type (type e)}))
+               (catch Exception e
+                 (log/warn :other-exception {:url url
+                                             :exception-type (type e)})
+                 (throw e)))]
     (when response
       (swap! scheme+authority-to-count update (url/scheme+authority url) (fnil inc 0))
       (swap! urls-crawled inc)
