@@ -47,7 +47,6 @@
   "Normalizes an `uri-like` object."
   [uri-like]
   (-> (uri/uri uri-like)
-      normalize/normalize
       (assoc :fragment nil
              :user nil
              :password nil)))
